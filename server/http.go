@@ -19,11 +19,6 @@ var (
 
 var statuszTemplate = template.Must(template.ParseFiles("templates/statusz.html"))
 
-func StartServer(name string) {
-
-	// Set up handlers
-}
-
 // KodekMux adds middleware functionality to all attached handlers, plus special handlers
 // for monitoring (/statusz, /healthz, and expvar metrics)
 type KodekMux struct {
@@ -44,12 +39,14 @@ func NewKodekMux(name string) *KodekMux {
 	return mux
 }
 
+// HandleFunc adds a new Handler function with all middleware.
 func (mux *KodekMux) HandleFunc(pattern string, handler func(w http.ResponseWriter, r *http.Request)) {
 	mux.ServeMux.HandleFunc(pattern, wrapHandler(pattern, handler))
 	mux.patterns = append(mux.patterns, pattern)
 	sort.Strings(mux.patterns)
 }
 
+// handleStatusz implements the /statusz handler.
 func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		ServerName string
@@ -68,15 +65,18 @@ func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 	//	}
 }
 
+// handleHealthz implements the /healthz handler.
 func (mux *KodekMux) handleHealthz(w http.ResponseWriter, r *http.Request) {
 	// TODO: Allow hooks from dependencies to report health.
 	fmt.Fprintf(w, "ok")
 }
 
+// userHandler represents an external handler.
 type userHandler struct {
 	name string
 }
 
+// wrapHandler wraps a given handler into a userHandler that's then used to attach all middleware.
 func wrapHandler(name string, f http.HandlerFunc) http.HandlerFunc {
 	h := userHandler{
 		name: name,
@@ -98,15 +98,18 @@ func (h *userHandler) metrics(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// codeCapturingResponseWriter wraps ResponseWriter to capture the response HTTP code.
 type codeCapturingResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
 }
 
+// newCodeCapturingResponseWriter creates a new codeCapturingResponseWriter.
 func newCodeCapturingResponseWriter(w http.ResponseWriter) *codeCapturingResponseWriter {
 	return &codeCapturingResponseWriter{w, http.StatusOK}
 }
 
+// WriterHeader wraps ResponseWriter and stores the given response code into codeCapturingResponseWriter.
 func (ccrw *codeCapturingResponseWriter) WriteHeader(code int) {
 	ccrw.statusCode = code
 	ccrw.ResponseWriter.WriteHeader(code)
