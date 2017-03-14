@@ -56,13 +56,6 @@ func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 		Patterns:   mux.patterns,
 	}
 	statuszTemplate.Execute(w, data)
-
-	//	fmt.Fprintf(w, "<h1>%s</h1>\n", mux.name)
-	//	fmt.Fprintf(w, "<p>up</p>")
-	// TODO add list of handlers with links in here
-	//	for _, pattern := range mux.patterns {
-	//		fmt.Fprintf(w, "<p><a href=\"%s\">%s</a></p>", pattern, pattern)
-	//	}
 }
 
 // handleHealthz implements the /healthz handler.
