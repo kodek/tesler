@@ -1,0 +1,11 @@
+<h1>{{.ServerName}}</h1>
+
+<ul>
+  {{range .Patterns}}
+    <li>
+      <a href="{{.}}">
+        {{.}}
+      </a>
+    </li>
+  {{end}}
+</ul>
