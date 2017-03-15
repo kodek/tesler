@@ -6,13 +6,14 @@ import (
 	"net/http"
 
 	"github.com/golang/glog"
+	"bitbucket.org/kodek64/tesler/common"
 )
 
 func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-	mux := NewKodekMux("Tesler")
+	mux := common.NewKodekMux("Tesler")
 
 	def := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {

@@ -1,5 +1,5 @@
 //TODO: Move to its own kodekmux package
-package main
+package common
 
 import (
 	"expvar"
