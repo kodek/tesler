@@ -4,9 +4,57 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jsgoecke/tesla"
 	"bitbucket.org/kodek64/tesler/common"
+
+	"context"
+
+	"github.com/cenkalti/backoff"
+	"github.com/golang/glog"
+	"github.com/jsgoecke/tesla"
 )
+
+const refreshDuration = 15 * time.Second
+
+func Start(ctx context.Context, conf common.Configuration) <-chan CarInfo {
+
+	out := make(chan CarInfo)
+
+	c, err := tesla.NewClient(getTeslaAuth(conf))
+	if err != nil {
+		panic(err)
+	}
+
+	var info *CarInfo = nil
+	refreshInfo := func() error {
+		i, err := getCarInfo(c)
+		if err != nil {
+			return err
+		}
+		info = i
+		return nil
+	}
+
+	onError := func(e error, d time.Duration) {
+		glog.Errorf("Error. Retrying in (%s): %s\n", common.Round(d, time.Millisecond), e)
+	}
+
+	retryStrategy := backoff.NewExponentialBackOff()
+	retryStrategy.MaxElapsedTime = 0
+	// Loop forever
+	go func() {
+		for {
+			backoff.RetryNotify(refreshInfo, retryStrategy, onError)
+			select {
+			case out <- *info:
+				glog.Info("Updated CarInfo")
+			case <-ctx.Done():
+				glog.Info("Tesla canceled")
+			}
+			time.Sleep(refreshDuration)
+		}
+	}()
+	return out
+}
 
 func getTeslaAuth(conf common.Configuration) *tesla.Auth {
 	teslaConf := conf.TeslaAuth

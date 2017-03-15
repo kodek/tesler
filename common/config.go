@@ -2,6 +2,8 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 )
 
@@ -28,4 +30,9 @@ func LoadConfig() Configuration {
 		panic(err)
 	}
 	return conf
+}
+
+func (c *Configuration) WriteRedacted(w io.Writer) {
+	// TODO: Implement
+	fmt.Fprintf(w, "%+v", *c)
 }
