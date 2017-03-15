@@ -33,6 +33,5 @@ func LoadConfig() Configuration {
 }
 
 func (c *Configuration) WriteRedacted(w io.Writer) {
-	// TODO: Implement
-	fmt.Fprintf(w, "%+v", *c)
+	fmt.Fprintf(w, "Config redaction not implemented.")
 }

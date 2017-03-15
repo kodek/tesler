@@ -37,9 +37,12 @@ func main() {
 	})
 
 	info := recorder.Start(context.Background(), conf)
-	for i := range info {
-		glog.Infof("Received: %s", spew.Sdump(i))
-	}
+	// TODO: Do something more useful here.
+	go func() {
+		for i := range info {
+			glog.Infof("Received: %s", spew.Sdump(i))
+		}
+	}()
 
 	glog.Infof("Starting Tesler server at %s", ":8080")
 	glog.Fatal(http.ListenAndServe(":8080", mux))
