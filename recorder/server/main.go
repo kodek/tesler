@@ -1,11 +1,12 @@
 package main
 
 import (
+	"context"
 	_ "expvar"
 	"flag"
 	"net/http"
 
-	"context"
+	"time"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"bitbucket.org/kodek64/tesler/recorder"
@@ -36,10 +37,13 @@ func main() {
 
 	})
 
-	info := recorder.Start(context.Background(), conf)
+	updates, err := recorder.NewCarInfoPublisher(context.Background(), conf)
+	if err != nil {
+		panic(err)
+	}
 	// TODO: Do something more useful here.
 	go func() {
-		for i := range info {
+		for i := range updates {
 			glog.Infof("Received: %s", spew.Sdump(i))
 		}
 	}()
