@@ -10,7 +10,8 @@ import (
 	"github.com/jsgoecke/tesla"
 )
 
-const refreshDuration = 15 * time.Second
+// TODO: Should be a flag
+const refreshDuration = 1 * time.Minute
 
 type teslaPubHelper struct {
 	client *tesla.Client
