@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"encoding/json"
+
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/jsgoecke/tesla"
 )
@@ -25,9 +27,17 @@ type ChargeInfo struct {
 	TimeToFullCharge *float64
 }
 
+type CarPosition struct {
+	Latitude  float64
+	Longitude float64
+	Speed     int
+}
+
 type CarInfo struct {
-	LastUpdate    time.Time
+	Timestamp     time.Time
 	Name          string
+	DrivingState  string
+	Position      CarPosition
 	ChargingState string
 	BatteryLevel  int
 	Charge        *ChargeInfo
@@ -60,12 +70,48 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 		}
 	}
 
+	firstStreamEvent, err := getSingleStreamEvent(vehicle.Vehicle)
+	if err != nil {
+		return nil, err
+	}
+
 	info := &CarInfo{
-		LastUpdate:    time.Now(),
-		Name:          vehicle.DisplayName,
+		Timestamp:    time.Now(),
+		Name:         vehicle.DisplayName,
+		DrivingState: firstStreamEvent.ShiftState,
+		Position: CarPosition{
+			Latitude:  firstStreamEvent.EstLat,
+			Longitude: firstStreamEvent.EstLng,
+			Speed:     firstStreamEvent.Speed,
+		},
 		ChargingState: charge.ChargingState,
 		BatteryLevel:  charge.BatteryLevel,
 		Charge:        cInfo,
 	}
 	return info, nil
+}
+
+func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
+	eventChan, errChan, err := vehicle.Stream()
+	if err != nil {
+		return nil, err
+	}
+	for {
+		select {
+		case event := <-eventChan:
+			eventJSON, _ := json.Marshal(event)
+			fmt.Println(string(eventJSON))
+			return event, nil
+		case err = <-errChan:
+			fmt.Println(err)
+			if err.Error() == "HTTP stream closed" {
+				fmt.Println("Reconnecting!")
+				eventChan, errChan, err = vehicle.Stream()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 }
