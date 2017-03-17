@@ -111,5 +111,5 @@ func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
 			}
 		}
 	}
-
+	panic("Should not happen")
 }
