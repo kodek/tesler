@@ -5,14 +5,16 @@ import (
 	_ "expvar"
 	"flag"
 	"net/http"
-
-	"time"
+	"os"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"bitbucket.org/kodek64/tesler/recorder"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 )
+
+// TODO: Turn into a flag
+const dbFilename = "tesla.db"
 
 func main() {
 	flag.Set("logtostderr", "true")
@@ -41,10 +43,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// TODO: Do something more useful here.
+	database, err := recorder.OpenDatabase(os.Getenv("HOME") + "/" + dbFilename)
+	defer database.Close()
+	if err != nil {
+		panic(err)
+	}
 	go func() {
 		for i := range updates {
 			glog.Infof("Received: %s", spew.Sdump(i))
+			err := database.Insert(context.Background(), &i)
+			if err != nil {
+				glog.Error(err)
+			}
 		}
 	}()
 

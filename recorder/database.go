@@ -8,15 +8,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const dbFilename = "./tesla.db"
-
 type CarDatabase struct {
 	conn *sql.DB
 }
 
-func OpenDatabase() (*CarDatabase, error) {
+func OpenDatabase(path string) (*CarDatabase, error) {
 
-	db, err := sql.Open("sqlite3", dbFilename)
+	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, err
 	}
