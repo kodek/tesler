@@ -39,7 +39,7 @@ func main() {
 
 	})
 
-	updates, err := recorder.NewCarInfoPublisher(context.Background(), conf)
+	updates, _, err := recorder.NewCarInfoPublisher(conf)
 	if err != nil {
 		panic(err)
 	}

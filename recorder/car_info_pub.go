@@ -1,7 +1,6 @@
 package recorder
 
 import (
-	"context"
 	"time"
 
 	"bitbucket.org/kodek64/tesler/common"
@@ -20,10 +19,10 @@ type teslaPubHelper struct {
 
 // NewCarInfoPublisher returns a channel that provides CarInfo updates.
 // TODO: Consider only publishing event changes.
-func NewCarInfoPublisher(ctx context.Context, conf common.Configuration) (<-chan CarInfo, error) {
+func NewCarInfoPublisher(conf common.Configuration) (<-chan CarInfo, chan<- bool, error) {
 	c, err := tesla.NewClient(getTeslaAuth(conf))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	out := make(chan CarInfo)
@@ -33,12 +32,13 @@ func NewCarInfoPublisher(ctx context.Context, conf common.Configuration) (<-chan
 		out:    out,
 	}
 
-	go t.updateIndefinitely(ctx)
+	stop := make(chan bool)
+	go t.updateIndefinitely(stop)
 
-	return out, nil
+	return out, stop, nil
 }
 
-func (t *teslaPubHelper) updateIndefinitely(ctx context.Context) {
+func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	var state *CarInfo = nil
 	refreshInfo := func() error {
 		i, err := getCarInfo(t.client)
@@ -63,8 +63,8 @@ func (t *teslaPubHelper) updateIndefinitely(ctx context.Context) {
 		select {
 		case t.out <- *state:
 			break
-		case <-ctx.Done():
-			glog.Info("Tesla canceled")
+		case <-stop:
+			glog.Info("Tesla sampling stopped.")
 			return
 		default:
 		}

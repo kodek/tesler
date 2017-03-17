@@ -96,20 +96,18 @@ func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	for {
-		select {
-		case event := <-eventChan:
-			eventJSON, _ := json.Marshal(event)
-			fmt.Println(string(eventJSON))
-			return event, nil
-		case err = <-errChan:
-			fmt.Println(err)
-			if err.Error() == "HTTP stream closed" {
-				fmt.Println("Reconnecting!")
-				eventChan, errChan, err = vehicle.Stream()
-				if err != nil {
-					return nil, err
-				}
+	select {
+	case event := <-eventChan:
+		eventJSON, _ := json.Marshal(event)
+		fmt.Println(string(eventJSON))
+		return event, nil
+	case err = <-errChan:
+		fmt.Println(err)
+		if err.Error() == "HTTP stream closed" {
+			fmt.Println("Reconnecting!")
+			eventChan, errChan, err = vehicle.Stream()
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
