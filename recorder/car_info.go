@@ -45,6 +45,7 @@ type CarInfo struct {
 
 func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 	// TODO: Support multiple vehicles
+	// TODO: Memoize
 	vehicles, err := client.Vehicles()
 	if err != nil {
 		return nil, err
@@ -93,6 +94,8 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 
 func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
 	eventChan, errChan, err := vehicle.Stream()
+	defer close(eventChan)
+	defer close(errChan)
 	if err != nil {
 		return nil, err
 	}
