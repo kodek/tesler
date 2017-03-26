@@ -93,12 +93,11 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 }
 
 func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
-	eventChan, errChan, err := vehicle.Stream()
-	defer close(eventChan)
-	defer close(errChan)
+	eventChan, doneChan, errChan, err := vehicle.Stream()
 	if err != nil {
 		return nil, err
 	}
+	defer close(doneChan)
 	select {
 	case event := <-eventChan:
 		eventJSON, _ := json.Marshal(event)
@@ -108,10 +107,11 @@ func getSingleStreamEvent(vehicle *tesla.Vehicle) (*tesla.StreamEvent, error) {
 		fmt.Println(err)
 		if err.Error() == "HTTP stream closed" {
 			fmt.Println("Reconnecting!")
-			eventChan, errChan, err = vehicle.Stream()
+			eventChan, doneChan, errChan, err = vehicle.Stream()
 			if err != nil {
 				return nil, err
 			}
+			defer close(doneChan)
 		}
 	}
 	panic("Should not happen")
