@@ -6,7 +6,7 @@ import (
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
-	"github.com/jsgoecke/tesla"
+	"github.com/kodek/tesla"
 )
 
 // TODO: Should be a flag

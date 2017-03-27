@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 
 	"bitbucket.org/kodek64/tesler/common"
-	"github.com/jsgoecke/tesla"
+	"github.com/kodek/tesla"
 )
 
 func getTeslaAuth(conf common.Configuration) *tesla.Auth {
