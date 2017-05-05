@@ -22,7 +22,7 @@ func main() {
 
 	mux := common.NewKodekMux("Tesler")
 
-	def := func(w http.ResponseWriter, r *http.Request) {
+	defaultHandleFunc := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
@@ -30,7 +30,7 @@ func main() {
 		// Redirect to statusz
 		http.Redirect(w, r, "/statusz", http.StatusSeeOther)
 	}
-	mux.HandleFunc("/", def)
+	mux.HandleFunc("/", defaultHandleFunc)
 
 	glog.Infof("Loading config")
 	conf := common.LoadConfig()
@@ -58,6 +58,7 @@ func main() {
 		}
 	}()
 
+	// TODO: Make port autoconf and/or a flag.
 	glog.Infof("Starting Tesler server at %s", ":8080")
 	glog.Fatal(http.ListenAndServe(":8080", mux))
 }
