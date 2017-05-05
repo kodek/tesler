@@ -1,17 +1,16 @@
 package recorder
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
-
-	"encoding/json"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/kodek/tesla"
 )
 
 func getTeslaAuth(conf common.Configuration) *tesla.Auth {
-	teslaConf := conf.TeslaAuth
+	teslaConf := conf.Recorder.TeslaAuth
 	return &tesla.Auth{
 		ClientID:     teslaConf.ClientId,
 		ClientSecret: teslaConf.ClientSecret,

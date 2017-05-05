@@ -8,6 +8,10 @@ import (
 )
 
 type Configuration struct {
+	Recorder Recorder
+}
+
+type Recorder struct {
 	TeslaAuth TeslaAuth
 }
 
