@@ -61,7 +61,7 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 		return nil, err
 	}
 
-	var cInfo *ChargeInfo = nil
+	var cInfo *ChargeInfo
 	if val, ok := charge.ChargerVoltage.(float64); ok && val != 0 {
 		cInfo = &ChargeInfo{
 			Voltage:          charge.ChargerVoltage.(float64),
