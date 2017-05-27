@@ -24,6 +24,8 @@ type ChargeInfo struct {
 	ActualCurrent    float64
 	PilotCurrent     float64
 	TimeToFullCharge *float64
+	ChargeMilesAdded float64
+	ChargeRate       float64
 }
 
 type CarPosition struct {
@@ -33,13 +35,15 @@ type CarPosition struct {
 }
 
 type CarInfo struct {
-	Timestamp     time.Time
-	Name          string
-	DrivingState  string
-	Position      CarPosition
-	ChargingState string
-	BatteryLevel  int
-	Charge        *ChargeInfo
+	Timestamp      time.Time
+	Name           string
+	DrivingState   string
+	Position       CarPosition
+	ChargingState  string
+	BatteryLevel   int
+	RangeLeft      float64
+	ChargeLimitSoc int
+	Charge         *ChargeInfo
 }
 
 func getCarInfo(client *tesla.Client) (*CarInfo, error) {
@@ -67,6 +71,8 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 			ActualCurrent:    charge.ChargerActualCurrent.(float64),
 			PilotCurrent:     charge.ChargerPilotCurrent.(float64),
 			TimeToFullCharge: &charge.TimeToFullCharge,
+			ChargeMilesAdded: charge.ChargeMilesAddedRated,
+			ChargeRate:       charge.ChargeRate,
 		}
 	}
 
@@ -84,9 +90,11 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 			Longitude: firstStreamEvent.EstLng,
 			Speed:     firstStreamEvent.Speed,
 		},
-		ChargingState: charge.ChargingState,
-		BatteryLevel:  charge.BatteryLevel,
-		Charge:        cInfo,
+		ChargingState:  charge.ChargingState,
+		BatteryLevel:   charge.BatteryLevel,
+		RangeLeft:      charge.BatteryRange,
+		ChargeLimitSoc: charge.ChargeLimitSoc,
+		Charge:         cInfo,
 	}
 	return info, nil
 }

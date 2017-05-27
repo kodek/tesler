@@ -35,15 +35,18 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 
 	// Charging
 	chargeFields := map[string]interface{}{
-		"state":      info.ChargingState,
-		"batt_level": info.BatteryLevel,
-		"range_left": info.BatteryLevel,
+		"state":            info.ChargingState,
+		"batt_level":       info.BatteryLevel,
+		"range_left":       info.RangeLeft,
+		"charge_limit_soc": info.ChargeLimitSoc,
 	}
 	if info.Charge != nil {
 		ci := info.Charge
 		chargeFields["voltage"] = ci.Voltage
 		chargeFields["actual_current"] = ci.ActualCurrent
 		chargeFields["pilot_current"] = ci.PilotCurrent
+		chargeFields["charge_miles_added"] = ci.ChargeMilesAdded
+		chargeFields["charge_rate"] = ci.ChargeRate
 		if ci.TimeToFullCharge != nil {
 			chargeFields["time_to_full_charge"] = *ci.TimeToFullCharge
 		}
