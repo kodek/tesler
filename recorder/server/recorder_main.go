@@ -14,8 +14,6 @@ import (
 )
 
 // TODO: Turn into flags
-const port = 8080
-
 func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
@@ -64,7 +62,10 @@ func main() {
 		}
 	}()
 
-	listenSpec := fmt.Sprintf(":%d", port)
+	if conf.Recorder.Port == 0 {
+		glog.Fatal("Port 0 currently not supported. Please set config.Recorder.Port to continue.")
+	}
+	listenSpec := fmt.Sprintf(":%d", conf.Recorder.Port)
 	glog.Infof("Starting Tesler recorder server at %s", listenSpec)
 	glog.Fatal(http.ListenAndServe(listenSpec, mux))
 }
