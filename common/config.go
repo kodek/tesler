@@ -12,7 +12,8 @@ type Configuration struct {
 }
 
 type Recorder struct {
-	TeslaAuth TeslaAuth
+	TeslaAuth      TeslaAuth
+	InfluxDbConfig InfluxDbConfig
 }
 
 type TeslaAuth struct {
@@ -20,6 +21,13 @@ type TeslaAuth struct {
 	ClientSecret string
 	Username     string
 	Password     string
+}
+
+type InfluxDbConfig struct {
+	Address  string
+	Username string
+	Password string
+	Database string
 }
 
 func LoadConfig() Configuration {

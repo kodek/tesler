@@ -2,25 +2,25 @@ package main
 
 import (
 	"context"
-	_ "expvar"
 	"flag"
+	"fmt"
 	"net/http"
-	"os"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"bitbucket.org/kodek64/tesler/recorder"
+	"bitbucket.org/kodek64/tesler/recorder/databases"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 )
 
-// TODO: Turn into a flag
-const dbFilename = "tesla.db"
+// TODO: Turn into flags
+const port = 8080
 
 func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-	mux := common.NewKodekMux("Tesler")
+	mux := common.NewKodekMux("Tesler-Recorder")
 
 	defaultHandleFunc := func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -43,11 +43,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	database, err := recorder.OpenDatabase(os.Getenv("HOME") + "/" + dbFilename)
-	defer database.Close()
+	var database databases.Database
+
+	// Uncomment to use sqlite.
+	//database, err = databases.OpenSqliteDatabase(os.Getenv("HOME") + "/" + sqliteDb)
+	influxConf := conf.Recorder.InfluxDbConfig
+	// TODO: Check that config isn't empty/missing.
+	database, err = databases.OpenInfluxDbDatabase(influxConf.Address, influxConf.Username, influxConf.Password, influxConf.Database)
 	if err != nil {
 		panic(err)
 	}
+	defer database.Close()
 	go func() {
 		for i := range updates {
 			glog.Infof("Received: %s", spew.Sdump(i))
@@ -58,7 +64,7 @@ func main() {
 		}
 	}()
 
-	// TODO: Make port autoconf and/or a flag.
-	glog.Infof("Starting Tesler server at %s", ":8080")
-	glog.Fatal(http.ListenAndServe(":8080", mux))
+	listenSpec := fmt.Sprintf(":%d", port)
+	glog.Infof("Starting Tesler recorder server at %s", listenSpec)
+	glog.Fatal(http.ListenAndServe(listenSpec, mux))
 }

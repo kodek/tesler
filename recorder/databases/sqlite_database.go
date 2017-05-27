@@ -1,4 +1,4 @@
-package recorder
+package databases
 
 import (
 	"context"
@@ -6,15 +6,16 @@ import (
 	"errors"
 	"time"
 
+	"bitbucket.org/kodek64/tesler/recorder"
 	"github.com/golang/glog"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type CarDatabase struct {
+type SqliteDatabase struct {
 	conn *sql.DB
 }
 
-func OpenDatabase(path string) (*CarDatabase, error) {
+func OpenSqliteDatabase(path string) (Database, error) {
 
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -26,7 +27,7 @@ func OpenDatabase(path string) (*CarDatabase, error) {
 		return nil, err
 	}
 
-	return &CarDatabase{
+	return &SqliteDatabase{
 		conn: db,
 	}, nil
 }
@@ -47,11 +48,11 @@ func createTables(conn *sql.DB) error {
 	return err
 }
 
-func (db *CarDatabase) Close() {
-	db.conn.Close()
+func (db *SqliteDatabase) Close() error {
+	return db.conn.Close()
 }
 
-func (db *CarDatabase) GetLatest(ctx context.Context) (*CarInfo, error) {
+func (db *SqliteDatabase) GetLatest(ctx context.Context) (*recorder.CarInfo, error) {
 	glog.Infof("Querying database for latest record.")
 	q := "select timestamp, driving_state, latitude, longitude, speed, charging_state, battery_level from CARINFO order by timestamp desc limit 1"
 	rows, err := db.conn.Query(q)
@@ -59,7 +60,7 @@ func (db *CarDatabase) GetLatest(ctx context.Context) (*CarInfo, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var carInfo *CarInfo
+	var carInfo *recorder.CarInfo
 	for rows.Next() {
 		if carInfo != nil {
 			// TODO: This is an assertion, but we should handle it more gracefully.
@@ -76,18 +77,18 @@ func (db *CarDatabase) GetLatest(ctx context.Context) (*CarInfo, error) {
 		if err != nil {
 			return nil, err
 		}
-		carInfo = &CarInfo{
+		carInfo = &recorder.CarInfo{
 			Timestamp:    time.Unix(timestamp, 0),
 			Name:         "Eve", // TODO: Add to different table.
 			DrivingState: drivingState,
-			Position: CarPosition{
+			Position: recorder.CarPosition{
 				Latitude:  lat,
 				Longitude: lon,
 				Speed:     speed,
 			},
 			ChargingState: chargeState,
 			BatteryLevel:  battLevel,
-			Charge: &ChargeInfo{
+			Charge: &recorder.ChargeInfo{
 				Voltage:          0,
 				ActualCurrent:    0,
 				PilotCurrent:     0,
@@ -101,7 +102,7 @@ func (db *CarDatabase) GetLatest(ctx context.Context) (*CarInfo, error) {
 	return carInfo, nil
 }
 
-func (db *CarDatabase) Insert(ctx context.Context, info *CarInfo) error {
+func (db *SqliteDatabase) Insert(ctx context.Context, info *recorder.CarInfo) error {
 	tx, err := db.conn.Begin()
 	if err != nil {
 		return err

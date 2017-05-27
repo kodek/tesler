@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"bitbucket.org/kodek64/tesler/common"
-	"bitbucket.org/kodek64/tesler/recorder"
+	"bitbucket.org/kodek64/tesler/recorder/databases"
 	"github.com/golang/glog"
 )
 
@@ -36,7 +36,7 @@ func main() {
 	// TODO: Add config loader/handler here if needed.
 
 	// TODO: Refactor from recorder_main.go
-	database, err := recorder.OpenDatabase(os.Getenv("HOME") + "/" + dbFilename)
+	database, err := databases.OpenSqliteDatabase(os.Getenv("HOME") + "/" + dbFilename)
 	defer database.Close()
 	if err != nil {
 		panic(err)
