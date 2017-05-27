@@ -37,6 +37,7 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 	chargeFields := map[string]interface{}{
 		"state":      info.ChargingState,
 		"batt_level": info.BatteryLevel,
+		"range_left": info.BatteryLevel,
 	}
 	if info.Charge != nil {
 		ci := info.Charge
@@ -44,7 +45,7 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 		chargeFields["actual_current"] = ci.ActualCurrent
 		chargeFields["pilot_current"] = ci.PilotCurrent
 		if ci.TimeToFullCharge != nil {
-			chargeFields["time_to_full_charge"] = ci.TimeToFullCharge
+			chargeFields["time_to_full_charge"] = *ci.TimeToFullCharge
 		}
 	}
 	charge, err := influxdb.NewPoint("charge", tags, chargeFields, info.Timestamp)
