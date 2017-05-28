@@ -67,6 +67,7 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 			"latitude":      info.Position.Latitude,
 			"longitude":     info.Position.Longitude,
 			"speed":         info.Position.Speed,
+			"odometer":      info.Odometer,
 			"driving_state": info.DrivingState,
 		}, info.Timestamp)
 	if err != nil {

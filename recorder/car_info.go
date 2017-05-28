@@ -44,6 +44,7 @@ type CarInfo struct {
 	RangeLeft      float64
 	ChargeLimitSoc int
 	Charge         *ChargeInfo
+	Odometer       float64
 }
 
 func getCarInfo(client *tesla.Client) (*CarInfo, error) {
@@ -84,6 +85,7 @@ func getCarInfo(client *tesla.Client) (*CarInfo, error) {
 	info := &CarInfo{
 		Timestamp:    time.Now(),
 		Name:         vehicle.DisplayName,
+		Odometer:     firstStreamEvent.Odometer,
 		DrivingState: firstStreamEvent.ShiftState,
 		Position: CarPosition{
 			Latitude:  firstStreamEvent.EstLat,
