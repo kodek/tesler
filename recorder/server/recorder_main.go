@@ -37,22 +37,29 @@ func main() {
 
 	})
 
-	updates, _, err := recorder.NewCarInfoPublisher(conf)
-	if err != nil {
-		panic(err)
-	}
+	// Open database
 	var database databases.Database
-
 	// Uncomment to use sqlite.
 	//database, err = databases.OpenSqliteDatabase(os.Getenv("HOME") + "/" + sqliteDb)
 	influxConf := conf.Recorder.InfluxDbConfig
 	// TODO: Check that config isn't empty/missing.
-	database, err = databases.OpenInfluxDbDatabase(influxConf.Address, influxConf.Username, influxConf.Password, influxConf.Database)
+	database, err := databases.OpenInfluxDbDatabase(
+		influxConf.Address,
+		influxConf.Username,
+		influxConf.Password,
+		influxConf.Database)
 	if err != nil {
 		panic(err)
 	}
 	defer database.Close()
+
+	// Start listening for car updates.
+	updates, _, err := recorder.NewCarInfoPublisher(conf)
+	if err != nil {
+		panic(err)
+	}
 	go func() {
+		// Process updates.
 		for i := range updates {
 			glog.Infof("Received: %s", spew.Sdump(i))
 			err := database.Insert(context.Background(), &i)

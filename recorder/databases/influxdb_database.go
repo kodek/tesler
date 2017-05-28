@@ -76,9 +76,12 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 	bp.AddPoint(pos)
 
 	err = this.conn.Write(bp)
+	if err != nil {
+		return err
+	}
 
-	glog.Info("Done writing to influxdb")
-	return err
+	glog.Info("Writing to InfluxDB successful")
+	return nil
 }
 
 func (this *influxDbDatabase) Close() error {
