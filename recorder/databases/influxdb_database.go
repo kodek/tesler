@@ -48,7 +48,9 @@ func (this *influxDbDatabase) Insert(ctx context.Context, info *recorder.CarInfo
 		chargeFields["charge_miles_added"] = ci.ChargeMilesAdded
 		chargeFields["charge_rate"] = ci.ChargeRate
 		if ci.TimeToFullCharge != nil {
-			chargeFields["time_to_full_charge"] = *ci.TimeToFullCharge
+			// NOTE: "time_to_full_charge" accidentally stored pointers. We're writing to a new field
+			// until we reset the database.
+			chargeFields["time_to_full_charge_hrs"] = *ci.TimeToFullCharge
 		}
 	}
 	charge, err := influxdb.NewPoint("charge", tags, chargeFields, info.Timestamp)
