@@ -14,12 +14,13 @@ pipelines:
           - mkdir -pv "${PACKAGE_PATH}"
           - tar -cO --exclude-vcs --exclude=bitbucket-pipelines.yml . | tar -xv -C "${PACKAGE_PATH}"
           - cd "${PACKAGE_PATH}"
-          - go get -v ./...
-          - go build -v recorder/server/recorder_main.go
-          - go test -v ./...
-          - docker build -t "kodek/tesler_recorder:latest" -f recorder/Dockerfile .
-          - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
-          - docker push kodek/tesler_recorder:lastest
+          - go get -v github.com/tools/godep
+          - go build github.com/tools/godep -o godep
+          - godep go build -v recorder/server/recorder_main.go
+          - godep go test -v ./...
+#          - docker build -t "kodek/tesler_recorder:latest" -f recorder/Dockerfile .
+#          - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+#          - docker push kodek/tesler_recorder:lastest
           
 options:
   docker: true
