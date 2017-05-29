@@ -27,9 +27,10 @@ func OpenSqliteDatabase(path string) (Database, error) {
 		return nil, err
 	}
 
-	return &SqliteDatabase{
-		conn: db,
-	}, nil
+	panic("Sqlite must be updated to use new car api.")
+	//return &SqliteDatabase{
+	//	conn: db,
+	//}, nil
 }
 
 // TODO: Support the full CarInfo in a normalized fashion.

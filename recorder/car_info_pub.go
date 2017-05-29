@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"bitbucket.org/kodek64/tesler/common"
+	"bitbucket.org/kodek64/tesler/recorder/car"
 	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
-	"github.com/kodek/tesla"
 )
 
 // TODO: Should be a flag
@@ -16,23 +16,24 @@ const chargingRefreshDuration = 1 * time.Minute
 const sleepingRefreshDuration = 15 * time.Minute
 
 type teslaPubHelper struct {
-	client *tesla.Client
-	out    chan CarInfo
+	carClient car.BlockingClient
+	out       chan car.Snapshot
 }
 
 // NewCarInfoPublisher returns a channel that provides CarInfo updates.
 // TODO: Consider only publishing event changes.
-func NewCarInfoPublisher(conf common.Configuration) (<-chan CarInfo, chan<- bool, error) {
-	c, err := tesla.NewClient(getTeslaAuth(conf))
+func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<- bool, error) {
+	// DO NOT SUBMIT: Move VIN to config.
+	carClient, err := car.NewTeslaBlockingClient(conf)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	out := make(chan CarInfo)
+	out := make(chan car.Snapshot)
 
 	t := &teslaPubHelper{
-		client: c,
-		out:    out,
+		carClient: carClient,
+		out:       out,
 	}
 
 	stop := make(chan bool)
@@ -42,13 +43,13 @@ func NewCarInfoPublisher(conf common.Configuration) (<-chan CarInfo, chan<- bool
 }
 
 func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
-	var state *CarInfo = nil
+	var latestSnapshot car.Snapshot
 	doRefreshFn := func() error {
-		i, err := getCarInfo(t.client)
+		snapshot, err := t.carClient.GetUpdate()
 		if err != nil {
 			return err
 		}
-		state = i
+		latestSnapshot = snapshot
 		return nil
 	}
 
@@ -64,16 +65,16 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	for {
 		// TODO: Allow cancelling of retry via context cancellation channel.
 		backoff.RetryNotify(doRefreshFn, retryStrategy, onError)
-		glog.Info("Updated CarInfo")
+		glog.Info("Updated car snapshot")
 		select {
-		case t.out <- *state: // Send update to client.
+		case t.out <- latestSnapshot: // Send update to client.
 			break
 		case <-stop: // Don't send further updates.
-			glog.Info("Tesla sampling stopped.")
+			glog.Info("Car sampling stopped.")
 			return
 		default: // The client wasn't ready for the update.
 		}
-		limiter.RateLimit(state)
+		limiter.RateLimit(latestSnapshot)
 	}
 }
 
@@ -88,7 +89,7 @@ func newRateLimiter() rateLimiter {
 	}
 }
 
-func (rl *rateLimiter) RateLimit(carState *CarInfo) {
+func (rl *rateLimiter) RateLimit(latestSnapshot car.Snapshot) {
 	// Rate limit
 	<-rl.ticker.C
 	rl.ticker.Stop()
@@ -96,13 +97,13 @@ func (rl *rateLimiter) RateLimit(carState *CarInfo) {
 	// Select a new ticker based on current state
 
 	// Fast ticking: car is being used.
-	if carState.DrivingState != "" {
+	if latestSnapshot.DrivingState != "" {
 		rl.ticker = time.NewTicker(drivingRefreshDuration)
 		glog.Infof("Fast refreshing due to use: %s", drivingRefreshDuration)
 		return
 	}
 	// Normal ticking: car is charging
-	if carState.Charge != nil {
+	if latestSnapshot.ChargeSession != nil {
 		rl.ticker = time.NewTicker(chargingRefreshDuration)
 		glog.Infof("Refreshing due to charging: %s", chargingRefreshDuration)
 		return

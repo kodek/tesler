@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
 	"github.com/kodek/tesla"
 )
@@ -48,37 +49,48 @@ type teslaBlockingClient struct {
 	cachedVehicle *tesla.Vehicle // Access via GetVehicle()
 }
 
-func NewTeslaBlockingClient(vin string, teslaClient *tesla.Client) (BlockingClient, error) {
+func getTeslaAuth(conf common.Configuration) *tesla.Auth {
+	teslaConf := conf.Recorder.TeslaAuth
+	return &tesla.Auth{
+		ClientID:     teslaConf.ClientId,
+		ClientSecret: teslaConf.ClientSecret,
+		Email:        teslaConf.Username,
+		Password:     teslaConf.Password,
+	}
+}
+
+// returns a BlockingClient for a Tesla vehicle.
+func NewTeslaBlockingClient(conf common.Configuration) (BlockingClient, error) {
+	tc, err := tesla.NewClient(getTeslaAuth(conf))
+	if err != nil {
+		return nil, err
+	}
 	return &teslaBlockingClient{
-		tc:  teslaClient,
-		vin: vin,
+		tc:  tc,
+		vin: conf.Recorder.CarVin,
 	}, nil
 }
 
 func (c *teslaBlockingClient) GetUpdate() (Snapshot, error) {
 	vehicle, err := c.getVehicle()
 	if err != nil {
-		return nil, err
+		return Snapshot{}, err
 	}
 
 	chargeState, err := vehicle.ChargeState()
 	if err != nil {
-		return nil, err
+		return Snapshot{}, err
 	}
 
 	streamEvent, err := c.getSingleStreamEvent()
 	if err != nil {
-		return nil, err
+		return Snapshot{}, err
 	}
 
 	return newSnapshot(vehicle, chargeState, streamEvent), nil
 }
 
 func newSnapshot(vehicleResponse *tesla.Vehicle, chargeStateResponse *tesla.ChargeState, streamEventResponse *tesla.StreamEvent) Snapshot {
-	var chargeSession *ChargeSession
-	if chargeStateResponse.ChargingState != "Disconnected" {
-		chargeSession = &toChargeSession(chargeStateResponse)
-	}
 	return Snapshot{
 		Timestamp:    time.Now(),
 		Name:         vehicleResponse.DisplayName,
@@ -93,12 +105,15 @@ func newSnapshot(vehicleResponse *tesla.Vehicle, chargeStateResponse *tesla.Char
 		BatteryLevel:   chargeStateResponse.BatteryLevel,
 		RangeLeft:      chargeStateResponse.BatteryRange,
 		ChargeLimitSoc: chargeStateResponse.ChargeLimitSoc,
-		ChargeSession:  chargeSession,
+		ChargeSession:  toChargeSession(chargeStateResponse),
 	}
 }
 
-func toChargeSession(response *tesla.ChargeState) ChargeSession {
-	session := ChargeSession{
+func toChargeSession(response *tesla.ChargeState) *ChargeSession {
+	if response.ChargingState == "Disconnected" {
+		return nil
+	}
+	session := &ChargeSession{
 		// TODO: If this fails, go back to a TimeToFullCharge pointer and &response.TimeToFulCharge.
 		TimeToFullCharge: response.TimeToFullCharge,
 		ChargeMilesAdded: response.ChargeMilesAddedRated,
@@ -129,10 +144,11 @@ func (c *teslaBlockingClient) getVehicle() (*tesla.Vehicle, error) {
 		return nil, err
 	}
 
-	for _, vehicle := range vehicles {
+	for i := range vehicles {
+		var vehicle *tesla.Vehicle = vehicles[i].Vehicle
 		if strings.ToLower(vehicle.Vin) == strings.ToLower(c.vin) {
 			glog.Infof("Found car with VIN %s.", c.vin)
-			c.cachedVehicle = &tesla.Vehicle(vehicle)
+			c.cachedVehicle = vehicle
 			return c.cachedVehicle, nil
 		}
 	}

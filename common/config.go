@@ -14,6 +14,7 @@ type Configuration struct {
 type Recorder struct {
 	Port           int
 	TeslaAuth      TeslaAuth
+	CarVin         string
 	InfluxDbConfig InfluxDbConfig
 }
 
