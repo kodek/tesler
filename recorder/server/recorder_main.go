@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -62,10 +61,10 @@ func main() {
 		// Process updates.
 		for i := range updates {
 			glog.Infof("Received: %s", spew.Sdump(i))
-			err := database.Insert(context.Background(), &i)
-			if err != nil {
-				glog.Error(err)
-			}
+			//err := database.Insert(context.Background(), &i)
+			// if err != nil {
+			// 	glog.Error(err)
+			// }
 		}
 	}()
 
