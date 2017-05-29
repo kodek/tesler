@@ -5,6 +5,7 @@
 # You can specify a custom docker image from Docker Hub as your build environment.
 image: golang:1.8
 
+
 pipelines:
   default:
     - step:
@@ -16,3 +17,9 @@ pipelines:
           - go get -v ./...
           - go build -v recorder/server/recorder_main.go
           - go test -v ./...
+          - docker build -t "kodek/tesler_recorder:latest" -f recorder/Dockerfile .
+          - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+          - docker push kodek/tesler_recorder:lastest
+          
+options:
+  docker: true
