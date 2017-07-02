@@ -11,9 +11,9 @@ import (
 
 // TODO: Should be a flag
 const drivingRefreshDuration = 15 * time.Second
-const normalRefreshDuration = 5 * time.Minute
+const normalRefreshDuration = 30 * time.Minute
 const chargingRefreshDuration = 1 * time.Minute
-const sleepingRefreshDuration = 15 * time.Minute
+const sleepingRefreshDuration = 1 * time.Hour
 
 type teslaPubHelper struct {
 	carClient car.BlockingClient
@@ -62,6 +62,7 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	defer close(t.out)
 
 	limiter := newRateLimiter()
+	glog.Infof("Initializing rate limiter. First tick will be fast.")
 	for {
 		// TODO: Allow cancelling of retry via context cancellation channel.
 		backoff.RetryNotify(doRefreshFn, retryStrategy, onError)
@@ -104,9 +105,13 @@ func (rl *rateLimiter) RateLimit(latestSnapshot car.Snapshot) {
 	}
 	// Normal ticking: car is charging
 	if latestSnapshot.ChargeSession != nil {
-		rl.ticker = time.NewTicker(chargingRefreshDuration)
-		glog.Infof("Refreshing due to charging: %s", chargingRefreshDuration)
-		return
+		if latestSnapshot.ChargingState == "Complete" {
+			glog.Infof("Plugged in, but fully charged. Not using charging refresh rate.")
+		} else {
+			glog.Infof("Refreshing due to charging (not fully charged): %s", chargingRefreshDuration)
+			rl.ticker = time.NewTicker(chargingRefreshDuration)
+			return
+		}
 	}
 
 	// It's between midnight and 8 am and car isn't charging or being used.
@@ -114,10 +119,10 @@ func (rl *rateLimiter) RateLimit(latestSnapshot car.Snapshot) {
 	now := time.Now()
 	if now.Hour() >= 0 && now.Hour() <= 8 {
 		rl.ticker = time.NewTicker(sleepingRefreshDuration)
-		glog.Infof("Slow refreshing due to time of day (12 to 8 am): %s", sleepingRefreshDuration)
+		glog.Infof("Slow refreshing due to hour of day %s being between 12 to 8 am: %s", now.Hour(), sleepingRefreshDuration)
 		return
 
 	}
 	rl.ticker = time.NewTicker(normalRefreshDuration)
-	glog.Infof("Normal refreshing: %s", normalRefreshDuration)
+	glog.Infof("Normal refreshing, car likely parked/stopped: %s", normalRefreshDuration)
 }
