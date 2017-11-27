@@ -9,12 +9,6 @@ import (
 	"github.com/golang/glog"
 )
 
-// TODO: Should be a flag
-const drivingRefreshDuration = 15 * time.Second
-const normalRefreshDuration = 30 * time.Minute
-const chargingRefreshDuration = 1 * time.Minute
-const sleepingRefreshDuration = 1 * time.Hour
-
 type teslaPubHelper struct {
 	carClient car.BlockingClient
 	out       chan car.Snapshot
@@ -61,7 +55,7 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	retryStrategy.MaxElapsedTime = 0
 	defer close(t.out)
 
-	limiter := newRateLimiter()
+	limiter := car.NewRateLimiter()
 	glog.Infof("Initializing rate limiter. First tick will be fast.")
 	for {
 		// TODO: Allow cancelling of retry via context cancellation channel.
@@ -77,52 +71,4 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 		}
 		limiter.RateLimit(latestSnapshot)
 	}
-}
-
-type rateLimiter struct {
-	ticker *time.Ticker
-}
-
-func newRateLimiter() rateLimiter {
-	return rateLimiter{
-		// Use a fast rate for the first tick.
-		ticker: time.NewTicker(drivingRefreshDuration),
-	}
-}
-
-func (rl *rateLimiter) RateLimit(latestSnapshot car.Snapshot) {
-	// Rate limit
-	<-rl.ticker.C
-	rl.ticker.Stop()
-
-	// Select a new ticker based on current state
-
-	// Fast ticking: car is being used.
-	if latestSnapshot.DrivingState != "" {
-		rl.ticker = time.NewTicker(drivingRefreshDuration)
-		glog.Infof("Fast refreshing due to use: %s", drivingRefreshDuration)
-		return
-	}
-	// Normal ticking: car is charging
-	if latestSnapshot.ChargeSession != nil {
-		if latestSnapshot.ChargingState == "Complete" {
-			glog.Infof("Plugged in, but fully charged. Not using charging refresh rate.")
-		} else {
-			glog.Infof("Refreshing due to charging (not fully charged): %s", chargingRefreshDuration)
-			rl.ticker = time.NewTicker(chargingRefreshDuration)
-			return
-		}
-	}
-
-	// It's between midnight and 8 am and car isn't charging or being used.
-	// TODO: Change to car is not charging and it hasn't been used in 2 hours.
-	now := time.Now()
-	if now.Hour() >= 0 && now.Hour() <= 8 {
-		rl.ticker = time.NewTicker(sleepingRefreshDuration)
-		glog.Infof("Slow refreshing due to hour of day %s being between 12 to 8 am: %s", now.Hour(), sleepingRefreshDuration)
-		return
-
-	}
-	rl.ticker = time.NewTicker(normalRefreshDuration)
-	glog.Infof("Normal refreshing, car likely parked/stopped: %s", normalRefreshDuration)
 }
