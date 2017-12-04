@@ -31,6 +31,7 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 	// Indexed tags
 	tags := map[string]string{
 		"car_name": snapshot.Name,
+		"vin":      snapshot.Vin,
 	}
 
 	// Charging

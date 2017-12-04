@@ -9,6 +9,7 @@ import (
 type Snapshot struct {
 	Timestamp      time.Time
 	Name           string
+	Vin            string
 	DrivingState   string
 	Bearings       Bearings
 	ChargingState  string
@@ -41,6 +42,7 @@ func newSnapshot(
 	return Snapshot{
 		Timestamp:    time.Now(),
 		Name:         vehicleResponse.DisplayName,
+		Vin:          vehicleResponse.Vin,
 		Odometer:     streamEventResponse.Odometer,
 		DrivingState: streamEventResponse.ShiftState,
 		Bearings: Bearings{

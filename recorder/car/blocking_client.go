@@ -3,7 +3,6 @@ package car
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
@@ -11,13 +10,12 @@ import (
 )
 
 type BlockingClient interface {
-	GetUpdate() (Snapshot, error)
+	GetUpdate(vin string) (Snapshot, error)
 }
 
 type teslaBlockingClient struct {
-	tc            *tesla.Client
-	vin           string
-	cachedVehicle *tesla.Vehicle // Access via getVehicle()
+	tc      *tesla.Client
+	vehicle map[string]*tesla.Vehicle // Access via getVehicle()
 }
 
 // returns a BlockingClient for a Tesla vehicle.
@@ -26,9 +24,10 @@ func NewTeslaBlockingClient(conf common.Configuration) (BlockingClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &teslaBlockingClient{
-		tc:  tc,
-		vin: conf.Recorder.CarVin,
+		tc:      tc,
+		vehicle: make(map[string]*tesla.Vehicle),
 	}, nil
 }
 
@@ -42,8 +41,8 @@ func getTeslaAuth(conf common.Configuration) *tesla.Auth {
 	}
 }
 
-func (c *teslaBlockingClient) GetUpdate() (Snapshot, error) {
-	vehicle, err := c.getVehicle()
+func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
+	vehicle, err := c.getVehicle(vin)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -53,7 +52,7 @@ func (c *teslaBlockingClient) GetUpdate() (Snapshot, error) {
 		return Snapshot{}, err
 	}
 
-	streamEvent, err := c.getSingleStreamEvent()
+	streamEvent, err := c.getSingleStreamEvent(vin)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -62,29 +61,41 @@ func (c *teslaBlockingClient) GetUpdate() (Snapshot, error) {
 }
 
 // Memoizes the tesla.Vehicle lookup on success.
-func (c *teslaBlockingClient) getVehicle() (*tesla.Vehicle, error) {
-	if c.cachedVehicle != nil {
-		return c.cachedVehicle, nil
+func (c *teslaBlockingClient) getVehicle(vin string) (*tesla.Vehicle, error) {
+	// Check the cache.
+	if c.vehicle[vin] != nil {
+		return c.vehicle[vin], nil
 	}
 
+	// It's not there.
+	c.updateVehicleCache()
+
+	// Check the cache again.
+	if c.vehicle[vin] != nil {
+		return c.vehicle[vin], nil
+	}
+
+	// It's still not there, so it must be missing from the account.
+	return nil, errors.New(fmt.Sprintf("No car found with vin %s in Tesla account!", vin))
+}
+
+func (c *teslaBlockingClient) updateVehicleCache() error {
+	// The vehicle vin wasn't found. Let's try to fetch a new list.
 	vehicles, err := c.tc.Vehicles()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for i := range vehicles {
-		var vehicle *tesla.Vehicle = vehicles[i].Vehicle
-		if strings.ToLower(vehicle.Vin) == strings.ToLower(c.vin) {
-			glog.Infof("Found car with VIN %s.", c.vin)
-			c.cachedVehicle = vehicle
-			return c.cachedVehicle, nil
-		}
+		var v = vehicles[i].Vehicle
+		c.vehicle[v.Vin] = v
+		glog.Infof("Found car with VIN %s.", v.Vin)
 	}
-	return nil, errors.New(fmt.Sprintf("No car found with vin %s in Tesla account!", c.vin))
+	return nil
 }
 
-func (c *teslaBlockingClient) getSingleStreamEvent() (*tesla.StreamEvent, error) {
-	v, err := c.getVehicle()
+func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEvent, error) {
+	v, err := c.getVehicle(vin)
 	if err != nil {
 		return nil, err
 	}
