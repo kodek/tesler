@@ -12,25 +12,29 @@ import (
 	"github.com/golang/glog"
 )
 
+const (
+  statuszTemplateFile = "templates/statusz.html"
+)
+
 var (
 	httpCounts    = expvar.NewMap("http_counts")
 	httpLatencyMs = expvar.NewMap("http_latency_ms")
 )
 
-var statuszTemplate = template.Must(template.ParseFiles("templates/statusz.html"))
-
 // KodekMux adds middleware functionality to all attached handlers, plus special handlers
 // for monitoring (/statusz, /healthz, and expvar metrics)
 type KodekMux struct {
 	http.ServeMux
-	name     string
-	patterns []string // used for statusz reporting
+	name            string
+	patterns        []string // used for statusz reporting
+	statuszTemplate *template.Template
 }
 
 // NewKodekMux creates a new KodekMux to handle all http requests.
 func NewKodekMux(name string) *KodekMux {
 	mux := &KodekMux{
 		name: name,
+		statuszTemplate: template.Must(template.ParseFiles(statuszTemplateFile)),
 	}
 	// Don't add middleware to the following
 	mux.HandleFunc("/statusz", mux.handleStatusz)
@@ -55,7 +59,7 @@ func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 		ServerName: mux.name,
 		Patterns:   mux.patterns,
 	}
-	statuszTemplate.Execute(w, data)
+	mux.statuszTemplate.Execute(w, data)
 }
 
 // handleHealthz implements the /healthz handler.
