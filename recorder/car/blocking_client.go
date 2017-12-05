@@ -107,11 +107,9 @@ func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEve
 	defer close(doneChan)
 	select {
 	case event := <-eventChan:
-		//eventJSON, _ := json.Marshal(event)
-		//fmt.Println(string(eventJSON))
 		return event, nil
 	case err = <-errChan:
-		fmt.Println(err)
+		glog.Info(err)
 		if err.Error() == "HTTP stream closed" {
 			fmt.Println("Reconnecting!")
 			eventChan, doneChan, errChan, err = v.Stream()
@@ -120,6 +118,7 @@ func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEve
 			}
 			defer close(doneChan)
 		}
+		return nil, err
 	}
-	panic("Should not happen")
+	panic("Should never happen")
 }
