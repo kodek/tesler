@@ -3,20 +3,14 @@ package car
 import (
 	"testing"
 	"time"
+
+	"bitbucket.org/kodek64/tesler/recorder/clock"
 )
-
-type fakeClock struct {
-	now time.Time
-}
-
-func (fc *fakeClock) Now() time.Time {
-	return fc.now
-}
 
 func TestDueToDriving(t *testing.T) {
 	dc := newDurationCalculator()
-	dc.clock = &fakeClock{
-		now: time.Date(2017, 1, 1, 0, 0, 0, 0, time.UTC),
+	dc.clock = &clock.FakeClock{
+		CurrentTime: time.Date(2017, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
 	actual := dc.calculate(Snapshot{DrivingState: "Not Empty"})
@@ -59,8 +53,8 @@ func TestDefaultRates(t *testing.T) {
 		{23, normalRefreshDuration},
 	}
 	for _, i := range tests {
-		dc.clock = &fakeClock{
-			now: time.Date(2017, 1, 1, i.hour, 0, 0, 0, time.UTC),
+		dc.clock = &clock.FakeClock{
+			CurrentTime: time.Date(2017, 1, 1, i.hour, 0, 0, 0, time.UTC),
 		}
 		d := dc.calculate(Snapshot{})
 		if d != i.expectedDuration {
