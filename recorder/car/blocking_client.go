@@ -3,6 +3,7 @@ package car
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
@@ -54,6 +55,10 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 
 	streamEvent, err := c.getSingleStreamEvent(vin)
 	if err != nil {
+		if strings.Contains(err.Error(), "Can't validate password") {
+			// Invalidate vehicle cache. it might have a bad vehicle token.
+			c.vehicle[vin] = nil
+		}
 		return Snapshot{}, err
 	}
 
