@@ -47,16 +47,19 @@ func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<-
 	}
 
 	stop := make(chan bool)
-	go t.updateIndefinitely(stop)
+
+	// Update all vins in parallel.
+	for _, vin := range t.vinsToUpdate {
+		go t.updateSingleCarIndefinitely(vin, stop)
+	}
 
 	return out, stop, nil
 }
 
-func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
+func (t *teslaPubHelper) updateSingleCarIndefinitely(vin string, stop <-chan bool) {
 	var latestSnapshot car.Snapshot
-	var vinToUpdate string
 	doRefreshFn := func() error {
-		snapshot, err := t.carClient.GetUpdate(vinToUpdate)
+		snapshot, err := t.carClient.GetUpdate(vin)
 		if err != nil {
 			return err
 		}
@@ -65,7 +68,7 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	}
 
 	onError := func(e error, d time.Duration) {
-		glog.Errorf("Error. Retrying in (%s): %s\n", common.Round(d, time.Millisecond), e)
+		glog.Errorf("Error fetching vin %s. Retrying in (%s): %s\n", vin, common.Round(d, time.Millisecond), e)
 	}
 
 	retryStrategy := backoff.NewExponentialBackOff()
@@ -73,22 +76,19 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	defer close(t.out)
 
 	limiter := car.NewRateLimiter()
-	glog.Infof("Initializing rate limiter. First tick will be fast.")
+	glog.Infof("Initializing rate limiter for vin %s. First tick will be fast.", vin)
 	for {
-		for _, nextVin := range t.vinsToUpdate {
-			vinToUpdate = nextVin
-			// TODO: Allow cancelling of retry via context cancellation channel.
-			backoff.RetryNotify(doRefreshFn, retryStrategy, onError)
-			glog.Info("Updated car snapshot")
-			select {
-			case t.out <- latestSnapshot: // Send update to client.
-				break
-			case <-stop: // Don't send further updates.
-				glog.Info("Car sampling stopped.")
-				return
-			default: // The client wasn't ready for the update.
-			}
-			limiter.RateLimit(latestSnapshot)
+		// TODO: Allow cancelling of retry via context cancellation channel.
+		backoff.RetryNotify(doRefreshFn, retryStrategy, onError)
+		glog.Infof("Updated car snapshot for vin %s", vin)
+		select {
+		case t.out <- latestSnapshot: // Send update to client.
+			break
+		case <-stop: // Don't send further updates.
+			glog.Infof("Car vin %s sampling stopped.", vin)
+			return
+		default: // The client wasn't ready for the update.
 		}
+		limiter.RateLimit(latestSnapshot)
 	}
 }
