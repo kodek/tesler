@@ -14,7 +14,6 @@ import (
 type teslaPubHelper struct {
 	carClient    car.BlockingClient
 	vinsToUpdate []string
-	limiters     map[string]car.RateLimiter
 	out          chan car.Snapshot
 }
 
@@ -27,12 +26,10 @@ func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<-
 	}
 
 	var vins []string
-	limiters := make(map[string]car.RateLimiter)
 	for _, confCar := range conf.Recorder.Cars {
 		if confCar.Monitor {
 			glog.Infof("Monitoring car with VIN %s", confCar.Vin)
 			vins = append(vins, confCar.Vin)
-			limiters[confCar.Vin] = car.NewRateLimiter()
 		} else {
 			glog.Infof("Car with VIN %s IGNORED!", confCar.Vin)
 		}
@@ -46,7 +43,6 @@ func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<-
 	t := &teslaPubHelper{
 		carClient:    carClient,
 		vinsToUpdate: vins,
-		limiters:     limiters,
 		out:          out,
 	}
 
@@ -76,6 +72,7 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 	retryStrategy.MaxElapsedTime = 0
 	defer close(t.out)
 
+	limiter := car.NewRateLimiter()
 	glog.Infof("Initializing rate limiter. First tick will be fast.")
 	for {
 		for _, nextVin := range t.vinsToUpdate {
@@ -91,7 +88,6 @@ func (t *teslaPubHelper) updateIndefinitely(stop <-chan bool) {
 				return
 			default: // The client wasn't ready for the update.
 			}
-			limiter := t.limiters[vinToUpdate]
 			limiter.RateLimit(latestSnapshot)
 		}
 	}
