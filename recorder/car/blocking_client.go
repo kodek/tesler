@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"sync"
+
 	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
 	"github.com/kodek/tesla"
@@ -15,8 +17,8 @@ type BlockingClient interface {
 }
 
 type teslaBlockingClient struct {
-	tc      *tesla.Client
-	vehicle map[string]*tesla.Vehicle // Access via getVehicle()
+	tc       *tesla.Client
+	vehicles sync.Map
 }
 
 // returns a BlockingClient for a Tesla vehicle.
@@ -27,8 +29,7 @@ func NewTeslaBlockingClient(conf common.Configuration) (BlockingClient, error) {
 	}
 
 	return &teslaBlockingClient{
-		tc:      tc,
-		vehicle: make(map[string]*tesla.Vehicle),
+		tc: tc,
 	}, nil
 }
 
@@ -57,7 +58,7 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 	if err != nil {
 		if strings.Contains(err.Error(), "Can't validate password") {
 			// Invalidate vehicle cache. it might have a bad vehicle token.
-			c.vehicle[vin] = nil
+			c.vehicles.Delete(vin)
 		}
 		return Snapshot{}, err
 	}
@@ -68,16 +69,20 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 // Memoizes the tesla.Vehicle lookup on success.
 func (c *teslaBlockingClient) getVehicle(vin string) (*tesla.Vehicle, error) {
 	// Check the cache.
-	if c.vehicle[vin] != nil {
-		return c.vehicle[vin], nil
+	val, ok := c.vehicles.Load(vin)
+	if ok {
+		vehicle := val.(*tesla.Vehicle)
+		return vehicle, nil
 	}
 
 	// It's not there.
 	c.updateVehicleCache()
 
 	// Check the cache again.
-	if c.vehicle[vin] != nil {
-		return c.vehicle[vin], nil
+	val, ok = c.vehicles.Load(vin)
+	if ok {
+		vehicle := val.(*tesla.Vehicle)
+		return vehicle, nil
 	}
 
 	// It's still not there, so it must be missing from the account.
@@ -93,7 +98,7 @@ func (c *teslaBlockingClient) updateVehicleCache() error {
 
 	for i := range vehicles {
 		var v = vehicles[i].Vehicle
-		c.vehicle[v.Vin] = v
+		c.vehicles.Store(v.Vin, v)
 		glog.Infof("Found car with VIN %s.", v.Vin)
 	}
 	return nil
