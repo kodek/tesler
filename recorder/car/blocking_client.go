@@ -17,8 +17,9 @@ type BlockingClient interface {
 }
 
 type teslaBlockingClient struct {
-	tc       *tesla.Client
-	vehicles sync.Map
+	tc         *tesla.Client
+	vehicles   sync.Map
+	vehicleMux sync.Mutex
 }
 
 // returns a BlockingClient for a Tesla vehicle.
@@ -68,6 +69,8 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 
 // Memoizes the tesla.Vehicle lookup on success.
 func (c *teslaBlockingClient) getVehicle(vin string) (*tesla.Vehicle, error) {
+	c.vehicleMux.Lock()
+	defer c.vehicleMux.Unlock()
 	// Check the cache.
 	val, ok := c.vehicles.Load(vin)
 	if ok {
