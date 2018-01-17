@@ -74,6 +74,18 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 	}
 	bp.AddPoint(pos)
 
+	// Misc
+	misc, err := influxdb.NewPoint(
+		"misc",
+		tags,
+		map[string]interface{}{
+			"wake_state": snapshot.WakeState,
+		}, snapshot.Timestamp)
+	if err != nil {
+		return err
+	}
+	bp.AddPoint(misc)
+
 	err = this.conn.Write(bp)
 	if err != nil {
 		return err

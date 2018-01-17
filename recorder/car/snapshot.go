@@ -10,6 +10,7 @@ type Snapshot struct {
 	Timestamp      time.Time
 	Name           string
 	Vin            string
+	WakeState      string // Whether the car is online or not before the remaining REST calls are performed.
 	DrivingState   string
 	Bearings       Bearings
 	ChargingState  string
@@ -43,6 +44,7 @@ func newSnapshot(
 		Timestamp:    time.Now(),
 		Name:         vehicleResponse.DisplayName,
 		Vin:          vehicleResponse.Vin,
+		WakeState:    vehicleResponse.State,
 		Odometer:     streamEventResponse.Odometer,
 		DrivingState: streamEventResponse.ShiftState,
 		Bearings: Bearings{
