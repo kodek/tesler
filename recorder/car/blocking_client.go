@@ -69,20 +69,21 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 
 // Memoizes the tesla.Vehicle lookup on success.
 func (c *teslaBlockingClient) getVehicle(vin string) (*tesla.Vehicle, error) {
-	c.vehicleMux.Lock()
-	defer c.vehicleMux.Unlock()
-	// Check the cache.
-	val, ok := c.vehicles.Load(vin)
-	if ok {
-		vehicle := val.(*tesla.Vehicle)
-		return vehicle, nil
-	}
+	// TODO: re-enable caching once we get enough WakeState data.
+	//c.vehicleMux.Lock()
+	//defer c.vehicleMux.Unlock()
+	//// Check the cache.
+	//val, ok := c.vehicles.Load(vin)
+	//if ok {
+	//	vehicle := val.(*tesla.Vehicle)
+	//	return vehicle, nil
+	//}
 
 	// It's not there.
 	c.updateVehicleCache()
 
 	// Check the cache again.
-	val, ok = c.vehicles.Load(vin)
+	val, ok := c.vehicles.Load(vin)
 	if ok {
 		vehicle := val.(*tesla.Vehicle)
 		return vehicle, nil
