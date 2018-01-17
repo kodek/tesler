@@ -50,7 +50,10 @@ func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<-
 
 	// Update all vins in parallel.
 	for _, vin := range t.vinsToUpdate {
-		go t.updateSingleCarIndefinitely(vin, stop)
+		_ = vin
+		_ = t
+		// WARNING: THIS DISABLES SAMPLING. Re-enable to get metrics.
+		// go t.updateSingleCarIndefinitely(vin, stop)
 	}
 
 	return out, stop, nil
