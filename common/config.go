@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -36,8 +37,17 @@ type InfluxDbConfig struct {
 	Database string
 }
 
+var configPath = flag.String("config", "", "The path to the config file")
+
 func LoadConfig() Configuration {
-	f, err := os.Open(os.Getenv("HOME") + "/.tesla_conf.json")
+	var path string
+	if *configPath == "" {
+		path = os.Getenv("HOME") + "/.tesla_conf.json"
+	} else {
+		path = *configPath
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
