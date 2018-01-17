@@ -40,11 +40,17 @@ func newSnapshot(
 	vehicleResponse *tesla.Vehicle,
 	chargeStateResponse *tesla.ChargeState,
 	streamEventResponse *tesla.StreamEvent) Snapshot {
+	var wakeState string
+	if vehicleResponse.State == nil {
+		wakeState = "null"
+	} else {
+		wakeState = *vehicleResponse.State
+	}
 	return Snapshot{
 		Timestamp:    time.Now(),
 		Name:         vehicleResponse.DisplayName,
 		Vin:          vehicleResponse.Vin,
-		WakeState:    vehicleResponse.State,
+		WakeState:    wakeState,
 		Odometer:     streamEventResponse.Odometer,
 		DrivingState: streamEventResponse.ShiftState,
 		Bearings: Bearings{
