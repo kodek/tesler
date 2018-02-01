@@ -9,7 +9,7 @@ import (
 
 // TODO: Should be flags
 const drivingRefreshDuration = 15 * time.Second
-const normalRefreshDuration = 30 * time.Minute
+const normalRefreshDuration = 1 * time.Hour
 const chargingRefreshDuration = 1 * time.Minute
 const sleepingRefreshDuration = 1 * time.Hour
 
