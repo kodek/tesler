@@ -59,8 +59,8 @@ func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
 	}
 	// Normal ticking: car is charging
 	if latestSnapshot.ChargeSession != nil {
-		if latestSnapshot.ChargingState == "Complete" {
-			glog.Infof("Plugged in, but fully charged. Not using charging refresh rate.")
+		if latestSnapshot.ChargingState != "Charging" {
+			glog.Infof("Plugged in, but not charging. Not using charging refresh rate.")
 		} else {
 			glog.Infof("Refreshing due to charging (not fully charged): %s", chargingRefreshDuration)
 			return chargingRefreshDuration
