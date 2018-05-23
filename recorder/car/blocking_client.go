@@ -60,8 +60,12 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 		if strings.Contains(err.Error(), "Can't validate password") {
 			// Invalidate vehicle cache. it might have a bad vehicle token.
 			c.vehicles.Delete(vin)
+		} else if strings.Contains(err.Error(), "HTTP stream closed") {
+			// The stream disconnected. Ignore stream data for this sample.
+			glog.Warning("Stream disconnected. Ignoring stream data for sample.")
+			return newSnapshot(vehicle, chargeState, nil), nil
 		}
-		return Snapshot{}, err
+		return Snapshot{}, nil
 	}
 
 	return newSnapshot(vehicle, chargeState, streamEvent), nil
@@ -123,16 +127,6 @@ func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEve
 	case event := <-eventChan:
 		return event, nil
 	case err = <-errChan:
-		if err.Error() == "HTTP stream closed" {
-			fmt.Println("Reconnecting!")
-			newEventChan, newDoneChan, newErrChan, newErr := v.Stream()
-			if newErr != nil {
-				return nil, newErr
-			}
-			eventChan = newEventChan
-			errChan = newErrChan
-			defer close(newDoneChan)
-		}
 		glog.Error("Error: ", err)
 		return nil, err
 	}
