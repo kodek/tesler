@@ -58,21 +58,23 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 	}
 	bp.AddPoint(charge)
 
-	// Position
-	pos, err := influxdb.NewPoint(
-		"position",
-		tags,
-		map[string]interface{}{
-			"latitude":      snapshot.Bearings.Latitude,
-			"longitude":     snapshot.Bearings.Longitude,
-			"speed":         snapshot.Bearings.Speed,
-			"odometer":      snapshot.Odometer,
-			"driving_state": snapshot.DrivingState,
-		}, snapshot.Timestamp)
-	if err != nil {
-		return err
+	if (snapshot.Bearings != nil && snapshot.Odometer != nil && snapshot.DrivingState != nil) {
+		// Position
+		pos, err := influxdb.NewPoint(
+			"position",
+			tags,
+			map[string]interface{}{
+				"latitude":      snapshot.Bearings.Latitude,
+				"longitude":     snapshot.Bearings.Longitude,
+				"speed":         snapshot.Bearings.Speed,
+				"odometer":      *snapshot.Odometer,
+				"driving_state": *snapshot.DrivingState,
+			}, snapshot.Timestamp)
+		if err != nil {
+			return err
+		}
+		bp.AddPoint(pos)
 	}
-	bp.AddPoint(pos)
 
 	// Misc
 	misc, err := influxdb.NewPoint(

@@ -53,7 +53,7 @@ type durationCalculator struct {
 }
 
 func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
-	if latestSnapshot.DrivingState != "" {
+	if latestSnapshot.DrivingState != nil && *latestSnapshot.DrivingState != "" {
 		glog.Infof("Fast refreshing due to use: %s", drivingRefreshDuration)
 		return drivingRefreshDuration
 	}
