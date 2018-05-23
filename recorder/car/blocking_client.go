@@ -125,13 +125,15 @@ func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEve
 	case err = <-errChan:
 		if err.Error() == "HTTP stream closed" {
 			fmt.Println("Reconnecting!")
-			eventChan, doneChan, errChan, err = v.Stream()
-			if err != nil {
-				return nil, err
+			newEventChan, newDoneChan, newErrChan, newErr := v.Stream()
+			if newErr != nil {
+				return nil, newErr
 			}
-			defer close(doneChan)
+			eventChan = newEventChan
+			errChan = newErrChan
+			defer close(newDoneChan)
 		}
-		glog.Error(err)
+		glog.Error("Error: ", err)
 		return nil, err
 	}
 	panic("Should not happen")
