@@ -1,14 +1,13 @@
 package recorder
 
 import (
+	"errors"
 	"time"
 
-	"errors"
-
-	"bitbucket.org/kodek64/tesler/common"
-	"bitbucket.org/kodek64/tesler/recorder/car"
 	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
+	"github.com/kodek/tesler/common"
+	"github.com/kodek/tesler/recorder/car"
 )
 
 type teslaPubHelper struct {

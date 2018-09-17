@@ -3,7 +3,7 @@ package databases
 import (
 	"context"
 
-	"bitbucket.org/kodek64/tesler/recorder/car"
+	"github.com/kodek/tesler/recorder/car"
 )
 
 type Database interface {

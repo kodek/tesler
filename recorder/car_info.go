@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"bitbucket.org/kodek64/tesler/common"
 	"github.com/kodek/tesla"
+	"github.com/kodek/tesler/common"
 )
 
 func getTeslaAuth(conf common.Configuration) *tesla.Auth {

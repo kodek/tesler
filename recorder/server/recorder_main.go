@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"bitbucket.org/kodek64/tesler/common"
-	"bitbucket.org/kodek64/tesler/recorder"
-	"bitbucket.org/kodek64/tesler/recorder/databases"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
+	"github.com/kodek/tesler/common"
+	"github.com/kodek/tesler/recorder"
+	"github.com/kodek/tesler/recorder/databases"
 )
 
 // TODO: Turn into flags

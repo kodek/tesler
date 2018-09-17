@@ -3,13 +3,12 @@ package main
 
 import (
 	"flag"
-
 	"time"
 
-	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
 	influxdb "github.com/influxdata/influxdb/client/v2"
 	"github.com/kodek/tesla"
+	"github.com/kodek/tesler/common"
 )
 
 func main() {
@@ -44,7 +43,7 @@ func Sample(conf common.Configuration, influxClient influxdb.Client, teslaClient
 	for i := range vehicles {
 		var vehicle = vehicles[i].Vehicle
 		if vehicle == nil {
-			glog.Error("Vehicle at index %d is null! This is unexpected.", i)
+			glog.Errorf("Vehicle at index %d is null! This is unexpected.", i)
 			return
 		}
 		glog.Infof("Recording vehicle: %s", vehicle.Vin)

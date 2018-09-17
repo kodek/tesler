@@ -3,8 +3,8 @@ package car
 import (
 	"time"
 
-	"bitbucket.org/kodek64/tesler/recorder/clock"
 	"github.com/golang/glog"
+	"github.com/kodek/tesler/recorder/clock"
 )
 
 // TODO: Should be flags
@@ -71,7 +71,7 @@ func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
 	// TODO: Change to car is not charging and it hasn't been used in 2 hours.
 	now := dc.clock.Now()
 	if now.Hour() >= 0 && now.Hour() <= 8 {
-		glog.Infof("Slow refreshing due to hour of day %s being between 12 to 8 am: %s", now.Hour(), sleepingRefreshDuration)
+		glog.Infof("Slow refreshing due to hour of day %d being between 12 to 8 am: %d", now.Hour(), sleepingRefreshDuration)
 		return sleepingRefreshDuration
 
 	}

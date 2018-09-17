@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"os"
 
-	"bitbucket.org/kodek64/tesler/common"
-	"bitbucket.org/kodek64/tesler/recorder/databases"
 	"github.com/golang/glog"
+	"github.com/kodek/tesler/common"
+	"github.com/kodek/tesler/recorder/databases"
 )
 
 // TODO: Turn into a flag

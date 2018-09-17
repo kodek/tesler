@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"bitbucket.org/kodek64/tesler/recorder"
 	"github.com/golang/glog"
+	"github.com/kodek/tesler/recorder"
 	_ "github.com/mattn/go-sqlite3"
 )
 

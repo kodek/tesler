@@ -3,9 +3,9 @@ package databases
 import (
 	"context"
 
-	"bitbucket.org/kodek64/tesler/recorder/car"
 	"github.com/golang/glog"
 	influxdb "github.com/influxdata/influxdb/client/v2"
+	"github.com/kodek/tesler/recorder/car"
 )
 
 type influxDbDatabase struct {
@@ -58,7 +58,7 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 	}
 	bp.AddPoint(charge)
 
-	if (snapshot.Bearings != nil && snapshot.Odometer != nil && snapshot.DrivingState != nil) {
+	if snapshot.Bearings != nil && snapshot.Odometer != nil && snapshot.DrivingState != nil {
 		// Position
 		pos, err := influxdb.NewPoint(
 			"position",

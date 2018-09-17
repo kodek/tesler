@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
 	"sync"
 
-	"bitbucket.org/kodek64/tesler/common"
 	"github.com/golang/glog"
 	"github.com/kodek/tesla"
+	"github.com/kodek/tesler/common"
 )
 
 type BlockingClient interface {
