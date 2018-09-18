@@ -52,11 +52,12 @@ func TestDefaultRates(t *testing.T) {
 		{8, sleepingRefreshDuration},
 		{9, normalRefreshDuration},
 		{15, normalRefreshDuration},
-		{23, normalRefreshDuration},
+		{19, normalRefreshDuration},
+		{20, sleepingRefreshDuration},
 	}
 	for _, i := range tests {
 		dc.clock = &clock.FakeClock{
-			CurrentTime: time.Date(2017, 1, 1, i.hour, 0, 0, 0, time.UTC),
+			CurrentTime: time.Date(2017, 1, 1, i.hour, 0, 0, 0, time.Local),
 		}
 		d := dc.calculate(Snapshot{})
 		if d != i.expectedDuration {
