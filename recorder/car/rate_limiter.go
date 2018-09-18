@@ -11,7 +11,7 @@ import (
 const drivingRefreshDuration = 15 * time.Second
 const normalRefreshDuration = 1 * time.Hour
 const chargingRefreshDuration = 1 * time.Minute
-const sleepingRefreshDuration = 1 * time.Hour
+const sleepingRefreshDuration = 6 * time.Hour
 
 type RateLimiter struct {
 	ticker       *time.Ticker
@@ -53,6 +53,8 @@ type durationCalculator struct {
 }
 
 func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
+	now := dc.clock.Now()
+	glog.Infof("Calculating rate-limited polling delay. The hour is %d", now.Hour())
 	if latestSnapshot.DrivingState != nil && *latestSnapshot.DrivingState != "" {
 		glog.Infof("Fast refreshing due to use: %s", drivingRefreshDuration)
 		return drivingRefreshDuration
@@ -69,7 +71,6 @@ func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
 
 	// It's between midnight and 8 am and car isn't charging or being used.
 	// TODO: Change to car is not charging and it hasn't been used in 2 hours.
-	now := dc.clock.Now()
 	if now.Hour() >= 0 && now.Hour() <= 8 {
 		glog.Infof("Slow refreshing due to hour of day %d being between 12 to 8 am: %d", now.Hour(), sleepingRefreshDuration)
 		return sleepingRefreshDuration
