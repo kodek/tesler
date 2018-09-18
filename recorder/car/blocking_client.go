@@ -12,7 +12,7 @@ import (
 )
 
 type BlockingClient interface {
-	GetUpdate(vin string) (Snapshot, error)
+	GetUpdate(vin string) (*Snapshot, error)
 }
 
 type teslaBlockingClient struct {
@@ -43,15 +43,15 @@ func getTeslaAuth(conf common.Configuration) *tesla.Auth {
 	}
 }
 
-func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
+func (c *teslaBlockingClient) GetUpdate(vin string) (*Snapshot, error) {
 	vehicle, err := c.getVehicle(vin)
 	if err != nil {
-		return Snapshot{}, err
+		return nil, err
 	}
 
 	chargeState, err := vehicle.ChargeState()
 	if err != nil {
-		return Snapshot{}, err
+		return nil, err
 	}
 
 	streamEvent, err := c.getSingleStreamEvent(vin)
@@ -64,7 +64,7 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (Snapshot, error) {
 			glog.Warning("Stream disconnected. Ignoring stream data for sample.")
 			return newSnapshot(vehicle, chargeState, nil), nil
 		}
-		return Snapshot{}, nil
+		return nil, err
 	}
 
 	return newSnapshot(vehicle, chargeState, streamEvent), nil

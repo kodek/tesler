@@ -62,7 +62,7 @@ func (t *teslaPubHelper) updateSingleCarIndefinitely(vin string, stop <-chan boo
 		if err != nil {
 			return err
 		}
-		latestSnapshot = snapshot
+		latestSnapshot = *snapshot
 		return nil
 	}
 

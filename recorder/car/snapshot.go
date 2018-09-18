@@ -39,7 +39,7 @@ type Bearings struct {
 func newSnapshot(
 	vehicleResponse *tesla.Vehicle,
 	chargeStateResponse *tesla.ChargeState,
-	streamEventResponse *tesla.StreamEvent) Snapshot {
+	streamEventResponse *tesla.StreamEvent) *Snapshot {
 	var wakeState string
 	if vehicleResponse.State == nil {
 		wakeState = "null"
@@ -66,7 +66,7 @@ func newSnapshot(
 		snapshot.Odometer = &streamEventResponse.Odometer
 		snapshot.DrivingState = &streamEventResponse.ShiftState
 	}
-	return snapshot
+	return &snapshot
 }
 
 func toChargeSession(response *tesla.ChargeState) *ChargeSession {
