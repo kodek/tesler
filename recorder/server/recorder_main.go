@@ -10,6 +10,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/kodek/tesler/common"
 	"github.com/kodek/tesler/recorder"
+	"github.com/kodek/tesler/recorder/car"
 	"github.com/kodek/tesler/recorder/databases"
 )
 
@@ -53,8 +54,13 @@ func main() {
 	}
 	defer database.Close()
 
+	teslaClient, err := car.NewTeslaClientFromConfig(conf)
+	if err != nil {
+		panic(err)
+	}
+
 	// Start listening for car updates.
-	updates, _, err := recorder.NewCarInfoPublisher(conf)
+	updates, _, err := recorder.NewCarInfoPublisher(teslaClient, conf)
 	if err != nil {
 		panic(err)
 	}

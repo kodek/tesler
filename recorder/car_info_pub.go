@@ -6,6 +6,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/glog"
+	"github.com/kodek/tesla"
 	"github.com/kodek/tesler/common"
 	"github.com/kodek/tesler/recorder/car"
 )
@@ -18,8 +19,8 @@ type teslaPubHelper struct {
 
 // NewCarInfoPublisher returns a channel that provides CarInfo updates.
 // TODO: Consider only publishing event changes.
-func NewCarInfoPublisher(conf common.Configuration) (<-chan car.Snapshot, chan<- bool, error) {
-	carClient, err := car.NewTeslaBlockingClient(conf)
+func NewCarInfoPublisher(teslaClient *tesla.Client, conf common.Configuration) (<-chan car.Snapshot, chan<- bool, error) {
+	carClient, err := car.NewTeslaBlockingClient(teslaClient)
 	if err != nil {
 		return nil, nil, err
 	}
