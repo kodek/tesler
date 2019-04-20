@@ -1,11 +1,14 @@
 package car
 
 import (
+	"flag"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/kodek/tesla"
 )
+
+var pollInterval = flag.Duration("polling_interval", 10*time.Second, "How often to check for car changes.")
 
 type ListenerFunc func(vehicle *tesla.Vehicle)
 
@@ -17,7 +20,7 @@ type Poller struct {
 
 func (p *Poller) AddListenerFunc(vin string, listenerFn ListenerFunc) {
 	if _, ok := p.vinToListener[vin]; ok {
-		glog.Fatal("Listener already attached to vin ", vin)
+		glog.Fatal("There's already a listener for VIN", vin)
 	}
 	p.vinToListener[vin] = listenerFn
 }
@@ -34,7 +37,7 @@ func NewPoller(tc *tesla.Client) (*Poller, error) {
 func (p *Poller) Start() {
 	p.pollOnce()
 
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(*pollInterval)
 	for range ticker.C {
 		p.pollOnce()
 		glog.Info("Sleeping Poller")

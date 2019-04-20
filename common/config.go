@@ -17,6 +17,7 @@ type Recorder struct {
 	TeslaAuth      TeslaAuth
 	Cars           []Car
 	InfluxDbConfig InfluxDbConfig
+	Pushover       PushoverConfig
 }
 type Car struct {
 	Monitor bool
@@ -35,6 +36,11 @@ type InfluxDbConfig struct {
 	Username string
 	Password string
 	Database string
+}
+
+type PushoverConfig struct {
+	Token string
+	User  string
 }
 
 var configPath = flag.String("config", "", "The path to the config file")
