@@ -3,7 +3,6 @@ package car
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/golang/glog"
@@ -54,20 +53,8 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (*Snapshot, error) {
 		return nil, err
 	}
 
-	streamEvent, err := c.getSingleStreamEvent(vin)
-	if err != nil {
-		if strings.Contains(err.Error(), "Can't validate password") {
-			// Invalidate vehicle cache. it might have a bad vehicle token.
-			c.vehicles.Delete(vin)
-		} else if strings.Contains(err.Error(), "HTTP stream closed") {
-			// The stream disconnected. Ignore stream data for this sample.
-			glog.Warning("Stream disconnected. Ignoring stream data for sample.")
-			return newSnapshot(vehicle, chargeState, nil), nil
-		}
-		return nil, err
-	}
-
-	return newSnapshot(vehicle, chargeState, streamEvent), nil
+	// TODO: StreamEventResponse is hardcoded to nil. Fetch the entire car's vehicle data in a single API request.
+	return newSnapshot(vehicle, chargeState, nil), nil
 }
 
 // Memoizes the tesla.Vehicle lookup on success.
@@ -109,25 +96,4 @@ func (c *teslaBlockingClient) updateVehicleCache() error {
 		glog.Infof("Found car with VIN %s.", v.Vin)
 	}
 	return nil
-}
-
-func (c *teslaBlockingClient) getSingleStreamEvent(vin string) (*tesla.StreamEvent, error) {
-	v, err := c.getVehicle(vin)
-	if err != nil {
-		return nil, err
-	}
-
-	eventChan, doneChan, errChan, err := v.Stream()
-	if err != nil {
-		return nil, err
-	}
-	defer close(doneChan)
-	select {
-	case event := <-eventChan:
-		return event, nil
-	case err = <-errChan:
-		glog.Error("Error: ", err)
-		return nil, err
-	}
-	panic("Should not happen")
 }
