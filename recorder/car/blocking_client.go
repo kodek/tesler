@@ -32,13 +32,17 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (*Snapshot, error) {
 		return nil, err
 	}
 
-	chargeState, err := vehicle.ChargeState()
+	_, err = vehicle.Wakeup()
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: StreamEventResponse is hardcoded to nil. Fetch the entire car's vehicle data in a single API request.
-	return newSnapshot(vehicle, chargeState, nil), nil
+	vehicleData, err := vehicle.VehicleData()
+	if err != nil {
+		return nil, err
+	}
+
+	return newSnapshotFromVehicleData(vehicleData), nil
 }
 
 // Memoizes the tesla.Vehicle lookup on success.
@@ -54,7 +58,7 @@ func (c *teslaBlockingClient) getVehicle(vin string) (*tesla.Vehicle, error) {
 	//}
 
 	// It's not there.
-	c.updateVehicleCache()
+	_ = c.updateVehicleCache()
 
 	// Check the cache again.
 	val, ok := c.vehicles.Load(vin)

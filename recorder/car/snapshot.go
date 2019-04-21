@@ -3,6 +3,8 @@ package car
 import (
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
 	"github.com/kodek/tesla"
 )
 
@@ -11,14 +13,14 @@ type Snapshot struct {
 	Name           string
 	Vin            string
 	WakeState      string // Whether the car is online or not before the remaining REST calls are performed.
-	DrivingState   *string
-	Bearings       *Bearings
+	DrivingState   string
+	Bearings       Bearings
 	ChargingState  string
 	BatteryLevel   int
 	RangeLeft      float64
 	ChargeLimitSoc int
 	ChargeSession  *ChargeSession
-	Odometer       *float64
+	Odometer       float64
 }
 
 type ChargeSession struct {
@@ -33,62 +35,46 @@ type ChargeSession struct {
 type Bearings struct {
 	Latitude  float64
 	Longitude float64
-	Speed     int
+	Speed     float64
 }
 
-func newSnapshot(
-	vehicleResponse *tesla.Vehicle,
-	chargeStateResponse *tesla.ChargeState,
-	streamEventResponse *tesla.StreamEvent) *Snapshot {
-	var wakeState string
-	if vehicleResponse.State == nil {
-		wakeState = "null"
-	} else {
-		wakeState = *vehicleResponse.State
-	}
+func newSnapshotFromVehicleData(vehicleData *tesla.VehicleData) *Snapshot {
+	glog.Infof("Parsing message: %s", spew.Sdump(vehicleData))
 	snapshot := Snapshot{
 		Timestamp:      time.Now(),
-		Name:           vehicleResponse.DisplayName,
-		Vin:            vehicleResponse.Vin,
-		WakeState:      wakeState,
-		ChargingState:  chargeStateResponse.ChargingState,
-		BatteryLevel:   chargeStateResponse.BatteryLevel,
-		RangeLeft:      chargeStateResponse.BatteryRange,
-		ChargeLimitSoc: chargeStateResponse.ChargeLimitSoc,
-		ChargeSession:  toChargeSession(chargeStateResponse),
-	}
-	if streamEventResponse != nil {
-		snapshot.Bearings = &Bearings{
-			Latitude:  streamEventResponse.EstLat,
-			Longitude: streamEventResponse.EstLng,
-			Speed:     streamEventResponse.Speed,
-		}
-		snapshot.Odometer = &streamEventResponse.Odometer
-		snapshot.DrivingState = &streamEventResponse.ShiftState
+		Name:           vehicleData.DisplayName,
+		Vin:            vehicleData.Vin,
+		WakeState:      vehicleData.State,
+		ChargingState:  vehicleData.ChargeState.ChargingState,
+		BatteryLevel:   vehicleData.ChargeState.BatteryLevel,
+		RangeLeft:      vehicleData.ChargeState.BatteryRange,
+		ChargeLimitSoc: vehicleData.ChargeState.ChargeLimitSoc,
+		ChargeSession:  toChargeSession(vehicleData),
+		Odometer:       vehicleData.VehicleState.Odometer,
+		Bearings: Bearings{
+			Latitude:  vehicleData.DriveState.Latitude,
+			Longitude: vehicleData.DriveState.Longitude,
+			Speed:     vehicleData.DriveState.Speed,
+		},
+		DrivingState: vehicleData.DriveState.ShiftState,
 	}
 	return &snapshot
 }
 
-func toChargeSession(response *tesla.ChargeState) *ChargeSession {
-	if response.ChargingState == "Disconnected" {
+func toChargeSession(parentResponse *tesla.VehicleData) *ChargeSession {
+	chargeState := parentResponse.ChargeState
+	if chargeState.ChargingState == "Disconnected" {
 		return nil
 	}
 	session := &ChargeSession{
 		// TODO: If this fails, go back to a TimeToFullCharge pointer and &response.TimeToFulCharge.
-		TimeToFullCharge: response.TimeToFullCharge,
-		ChargeMilesAdded: response.ChargeMilesAddedRated,
-		ChargeRate:       response.ChargeRate,
+		TimeToFullCharge: chargeState.TimeToFullCharge,
+		ChargeMilesAdded: chargeState.ChargeMilesAddedRated,
+		ChargeRate:       chargeState.ChargeRate,
+		Voltage:          chargeState.ChargerVoltage,
+		ActualCurrent:    chargeState.ChargerActualCurrent,
+		PilotCurrent:     chargeState.ChargerPilotCurrent,
 	}
 
-	// Potentially missing fields.
-	if val, ok := response.ChargerVoltage.(float64); ok {
-		session.Voltage = val
-	}
-	if val, ok := response.ChargerActualCurrent.(float64); ok {
-		session.ActualCurrent = val
-	}
-	if val, ok := response.ChargerPilotCurrent.(float64); ok {
-		session.PilotCurrent = val
-	}
 	return session
 }

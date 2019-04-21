@@ -55,7 +55,7 @@ type durationCalculator struct {
 func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
 	now := dc.clock.Now()
 	glog.Infof("Calculating rate-limited polling delay. The hour is %d", now.Hour())
-	if latestSnapshot.DrivingState != nil && *latestSnapshot.DrivingState != "" {
+	if latestSnapshot.DrivingState != "" {
 		glog.Infof("Fast refreshing due to use: %s", drivingRefreshDuration)
 		return drivingRefreshDuration
 	}
