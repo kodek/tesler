@@ -53,7 +53,9 @@ func main() {
 				glog.Infof("Ignored %s processing because it is first.", v.DisplayName)
 				isFirst = false
 
-				message := pushover.NewMessage(fmt.Sprintf("Monitoring for %s is ready!", v.DisplayName))
+				message := pushover.NewMessageWithTitle(
+					fmt.Sprintf("Car's state: %s", stateString(v)),
+					fmt.Sprintf("Monitoring for %s is ready!", v.DisplayName))
 				_, err := push.SendMessage(message, pushUser)
 				if err != nil {
 					glog.Errorf("Cannot send Pushover message: %s", err)
@@ -67,8 +69,6 @@ func main() {
 
 	// Open database
 	var database databases.Database
-	// Uncomment to use sqlite.
-	//database, err = databases.OpenSqliteDatabase(os.Getenv("HOME") + "/" + sqliteDb)
 	influxConf := conf.Recorder.InfluxDbConfig
 	// TODO: Check that config isn't empty/missing.
 	database, err = databases.OpenInfluxDbDatabase(
@@ -103,9 +103,10 @@ func main() {
 	}
 	logAndNotifyListener := func(v *tesla.Vehicle) {
 		glog.Infof("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
+
 		message := pushover.NewMessageWithTitle(
 			spew.Sdump(v),
-			fmt.Sprintf("Vehicle %s state changed to %+v", v.DisplayName, v.State))
+			fmt.Sprintf("Vehicle %s state changed to %s", v.DisplayName, stateString(v)))
 		_, err := push.SendMessage(message, pushUser)
 
 		if err != nil {
@@ -138,4 +139,11 @@ func main() {
 							logAndNotifyListener)))))
 	}
 	poller.Start()
+}
+
+func stateString(v *tesla.Vehicle) string {
+	if v.State != nil {
+		return *v.State
+	}
+	return "<unknown>"
 }
