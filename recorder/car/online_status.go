@@ -63,7 +63,7 @@ func (p *Poller) pollOnce() {
 		p.vinToStatus[v.Vin] = v.Vehicle
 
 		if !statusHasChanged(prev, v.Vehicle) {
-			glog.Info("Nothing to report for vehicle vin ", v.Vin)
+			glog.Infof("Nothing to report for vehicle VIN %s. State is still %s", v.Vin, *v.State)
 			continue
 		}
 		for _, listenerFn := range p.changeStatusFns {
