@@ -39,9 +39,9 @@ func main() {
 		// NOTE: Not thread-safe.
 		count := 0
 		return func(v *tesla.Vehicle) {
+			defer in(v)
 			count = count + 1
 			glog.Infof("Count for %s is %d.", v.DisplayName, count)
-			in(v)
 		}
 	}
 
@@ -83,6 +83,7 @@ func main() {
 
 	recordMetricsAdapter := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
 		return func(v *tesla.Vehicle) {
+			defer in(v)
 			if v.State == nil || *v.State != "online" {
 				glog.Infof("Not recording metrics for %s because it's going offline.", v.DisplayName)
 				return
@@ -97,8 +98,6 @@ func main() {
 			if err != nil {
 				glog.Fatalf("Cannot write to database: %s", err)
 			}
-
-			in(v)
 		}
 	}
 	logAndNotifyListener := func(v *tesla.Vehicle) {
