@@ -33,16 +33,18 @@ func main() {
 		panic(err)
 	}
 
-	countAdapter := func(in func(v *tesla.Vehicle)) func(v *tesla.Vehicle) {
+	newCountAdapter := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+		// NOTE: Not thread-safe.
 		count := 0
 		return func(v *tesla.Vehicle) {
 			count = count + 1
-			in(v)
 			glog.Infof("Count for %s is %d.", v.DisplayName, count)
+			in(v)
 		}
 	}
 
-	ignoreFirstAdapter := func(in func(v *tesla.Vehicle)) func(v *tesla.Vehicle) {
+	newIgnoreFirstAdapter := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+		// NOTE: Not thread-safe.
 		isFirst := true
 		return func(v *tesla.Vehicle) {
 			if isFirst {
@@ -74,11 +76,27 @@ func main() {
 	}
 
 	for _, c := range conf.Recorder.Cars {
-		if !c.Monitor {
-			glog.Infof("Skipping VIN %s. Monitoring disabled in config.", c.Vin)
-			continue
+		onlyRunThisCarFn := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+			thisVin := c.Vin
+			thisMonitor := c.Monitor
+			return func(v *tesla.Vehicle) {
+				if v.Vin != thisVin {
+					// Skip the car. Hopefully some other handler will match it.
+					// TODO: Restructure code so that if a new vin shows up (outside the config), an error is logged.
+					return
+				}
+				if !thisMonitor {
+					glog.Infof("Ignored update for VIN %s. Monitoring disabled in config.", v.Vin)
+					return
+				}
+				in(v)
+			}
 		}
-		poller.AddListenerFunc(c.Vin, countAdapter(ignoreFirstAdapter(logAndNotifyListener)))
+		poller.AddVehicleChangeListener(
+			onlyRunThisCarFn(
+				newCountAdapter(
+					newIgnoreFirstAdapter(
+						logAndNotifyListener))))
 	}
 	poller.Start()
 }

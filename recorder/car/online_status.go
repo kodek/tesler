@@ -10,26 +10,23 @@ import (
 
 var pollInterval = flag.Duration("polling_interval", 10*time.Second, "How often to check for car changes.")
 
-type ListenerFunc func(vehicle *tesla.Vehicle)
+type OnVehicleChangeFunc func(v *tesla.Vehicle)
 
 type Poller struct {
-	tc            *tesla.Client
-	vinToListener map[string]ListenerFunc
-	vinToStatus   map[string]*tesla.Vehicle
+	tc              *tesla.Client
+	changeStatusFns []OnVehicleChangeFunc
+	vinToStatus     map[string]*tesla.Vehicle
 }
 
-func (p *Poller) AddListenerFunc(vin string, listenerFn ListenerFunc) {
-	if _, ok := p.vinToListener[vin]; ok {
-		glog.Fatal("There's already a listener for VIN", vin)
-	}
-	p.vinToListener[vin] = listenerFn
+func (p *Poller) AddVehicleChangeListener(listenerFn OnVehicleChangeFunc) {
+	p.changeStatusFns = append(p.changeStatusFns, listenerFn)
 }
 
 func NewPoller(tc *tesla.Client) (*Poller, error) {
 	p := &Poller{
-		tc:            tc,
-		vinToListener: make(map[string]ListenerFunc),
-		vinToStatus:   make(map[string]*tesla.Vehicle),
+		tc:              tc,
+		vinToStatus:     make(map[string]*tesla.Vehicle),
+		changeStatusFns: make([]OnVehicleChangeFunc, 0),
 	}
 	return p, nil
 }
@@ -58,21 +55,19 @@ func (p *Poller) pollOnce() {
 		// update cache
 		p.vinToStatus[v.Vin] = v.Vehicle
 
-		if !shouldReport(prev, v.Vehicle) {
+		if !statusHasChanged(prev, v.Vehicle) {
 			glog.Info("Nothing to report for vehicle vin ", v.Vin)
 			continue
 		}
-		listenerFn, ok := p.vinToListener[v.Vin]
-		if !ok {
-			glog.Fatal("No listener for car with vin ", v.Vin)
+		for _, listenerFn := range p.changeStatusFns {
+			go listenerFn(v.Vehicle)
 		}
-		go listenerFn(v.Vehicle)
 	}
 }
 
-func shouldReport(prev *tesla.Vehicle, new *tesla.Vehicle) bool {
+func statusHasChanged(prev *tesla.Vehicle, new *tesla.Vehicle) bool {
 	if prev == nil {
-		// If this is the first time, send a report
+		// Report the first fetch as a change.
 		return true
 	}
 	if new == nil {
