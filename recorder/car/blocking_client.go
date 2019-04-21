@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/kodek/tesla"
-	"github.com/kodek/tesler/common"
 )
 
 type BlockingClient interface {
@@ -21,25 +20,10 @@ type teslaBlockingClient struct {
 }
 
 // returns a BlockingClient for a Tesla vehicle.
-func NewTeslaBlockingClient(conf common.Configuration) (BlockingClient, error) {
-	tc, err := tesla.NewClient(getTeslaAuth(conf))
-	if err != nil {
-		return nil, err
-	}
-
+func NewTeslaBlockingClient(tc *tesla.Client) (BlockingClient, error) {
 	return &teslaBlockingClient{
 		tc: tc,
 	}, nil
-}
-
-func getTeslaAuth(conf common.Configuration) *tesla.Auth {
-	teslaConf := conf.Recorder.TeslaAuth
-	return &tesla.Auth{
-		ClientID:     teslaConf.ClientId,
-		ClientSecret: teslaConf.ClientSecret,
-		Email:        teslaConf.Username,
-		Password:     teslaConf.Password,
-	}
 }
 
 func (c *teslaBlockingClient) GetUpdate(vin string) (*Snapshot, error) {
