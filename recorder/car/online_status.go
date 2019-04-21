@@ -11,10 +11,12 @@ import (
 var pollInterval = flag.Duration("polling_interval", 10*time.Second, "How often to check for car changes.")
 
 type OnVehicleChangeFunc func(v *tesla.Vehicle)
+type OnPollingFunc func()
 
 type Poller struct {
 	tc              *tesla.Client
 	changeStatusFns []OnVehicleChangeFunc
+	onPollingFns    []OnPollingFunc
 	vinToStatus     map[string]*tesla.Vehicle
 }
 
@@ -22,11 +24,16 @@ func (p *Poller) AddVehicleChangeListener(listenerFn OnVehicleChangeFunc) {
 	p.changeStatusFns = append(p.changeStatusFns, listenerFn)
 }
 
+func (p *Poller) AddPollingListener(listenerFn OnPollingFunc) {
+	p.onPollingFns = append(p.onPollingFns, listenerFn)
+}
+
 func NewPoller(tc *tesla.Client) (*Poller, error) {
 	p := &Poller{
 		tc:              tc,
 		vinToStatus:     make(map[string]*tesla.Vehicle),
 		changeStatusFns: make([]OnVehicleChangeFunc, 0),
+		onPollingFns:    make([]OnPollingFunc, 0),
 	}
 	return p, nil
 }
@@ -62,6 +69,10 @@ func (p *Poller) pollOnce() {
 		for _, listenerFn := range p.changeStatusFns {
 			go listenerFn(v.Vehicle)
 		}
+	}
+
+	for _, fns := range p.onPollingFns {
+		fns()
 	}
 }
 
