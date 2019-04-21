@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/golang/glog"
-	influxdb "github.com/influxdata/influxdb/client/v2"
+	influxdb "github.com/influxdata/influxdb1-client/v2"
 	"github.com/kodek/tesler/recorder/car"
 )
 
