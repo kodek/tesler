@@ -13,15 +13,13 @@ func TestDueToDriving(t *testing.T) {
 		CurrentTime: time.Date(2017, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	drivingState := "Not Empty"
-	actual := dc.calculate(Snapshot{DrivingState: &drivingState})
+	actual := dc.calculate(Snapshot{DrivingState: "Not Empty"})
 	expected := drivingRefreshDuration
 	if actual != expected {
 		t.Errorf("Duration calculator while driving got %s, expected %s.", actual, expected)
 	}
 
-	drivingState = ""
-	actual = dc.calculate(Snapshot{DrivingState: &drivingState})
+	actual = dc.calculate(Snapshot{DrivingState: ""})
 	notExpected := drivingRefreshDuration
 	if actual == notExpected {
 		t.Errorf("Duration calculator while driving got %s, did not expect %s.", actual, notExpected)

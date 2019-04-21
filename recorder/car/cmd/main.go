@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -10,10 +11,11 @@ import (
 	"github.com/kodek/tesla"
 	"github.com/kodek/tesler/common"
 	"github.com/kodek/tesler/recorder/car"
+	"github.com/kodek/tesler/recorder/databases"
 )
 
 func main() {
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 
 	glog.Info("Loading config")
@@ -63,6 +65,39 @@ func main() {
 		}
 	}
 
+	// Open database
+	var database databases.Database
+	// Uncomment to use sqlite.
+	//database, err = databases.OpenSqliteDatabase(os.Getenv("HOME") + "/" + sqliteDb)
+	influxConf := conf.Recorder.InfluxDbConfig
+	// TODO: Check that config isn't empty/missing.
+	database, err = databases.OpenInfluxDbDatabase(
+		influxConf.Address,
+		influxConf.Username,
+		influxConf.Password,
+		influxConf.Database)
+	if err != nil {
+		panic(err)
+	}
+	defer database.Close()
+
+	recordMetricsAdapter := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+		return func(v *tesla.Vehicle) {
+			if v.State == nil || *v.State != "online" {
+				glog.Infof("Not recording metrics for %s because it's going offline.", v.DisplayName)
+				return
+			}
+			vd, err := v.VehicleData()
+			if err != nil {
+				glog.Errorf("Cannot fetch vehicle data for %s: %s", v.DisplayName, err)
+			}
+
+			err = database.Insert(context.Background(), *car.NewSnapshot(vd))
+			if err != nil {
+				glog.Fatalf("Cannot write to database: %s", err)
+			}
+		}
+	}
 	logAndNotifyListener := func(v *tesla.Vehicle) {
 		glog.Infof("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
 		message := pushover.NewMessageWithTitle(
@@ -96,7 +131,8 @@ func main() {
 			onlyRunThisCarFn(
 				newCountAdapter(
 					newIgnoreFirstAdapter(
-						logAndNotifyListener))))
+						recordMetricsAdapter(
+							logAndNotifyListener)))))
 	}
 	poller.Start()
 }

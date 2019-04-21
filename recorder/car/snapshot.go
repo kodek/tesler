@@ -38,7 +38,7 @@ type Bearings struct {
 	Speed     float64
 }
 
-func newSnapshotFromVehicleData(vehicleData *tesla.VehicleData) *Snapshot {
+func NewSnapshot(vehicleData *tesla.VehicleData) *Snapshot {
 	glog.Infof("Parsing message: %s", spew.Sdump(vehicleData))
 	snapshot := Snapshot{
 		Timestamp:      time.Now(),

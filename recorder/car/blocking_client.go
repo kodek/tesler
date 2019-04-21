@@ -42,7 +42,7 @@ func (c *teslaBlockingClient) GetUpdate(vin string) (*Snapshot, error) {
 		return nil, err
 	}
 
-	return newSnapshotFromVehicleData(vehicleData), nil
+	return NewSnapshot(vehicleData), nil
 }
 
 // Memoizes the tesla.Vehicle lookup on success.
