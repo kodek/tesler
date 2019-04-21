@@ -90,12 +90,15 @@ func main() {
 			vd, err := v.VehicleData()
 			if err != nil {
 				glog.Errorf("Cannot fetch vehicle data for %s: %s", v.DisplayName, err)
+				return
 			}
 
 			err = database.Insert(context.Background(), *car.NewSnapshot(vd))
 			if err != nil {
 				glog.Fatalf("Cannot write to database: %s", err)
 			}
+
+			in(v)
 		}
 	}
 	logAndNotifyListener := func(v *tesla.Vehicle) {

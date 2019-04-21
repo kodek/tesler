@@ -72,7 +72,7 @@ func (dc *durationCalculator) calculate(latestSnapshot Snapshot) time.Duration {
 	// It's between midnight and 8 am and car isn't charging or being used.
 	// TODO: Change to car is not charging and it hasn't been used in 2 hours.
 	if now.Hour() >= 20 || now.Hour() <= 8 {
-		glog.Infof("Slow refreshing due to hour of day %d being between 12 to 8 am: %d", now.Hour(), sleepingRefreshDuration)
+		glog.Infof("Slow refreshing due to hour of day %d being between 8 pm to 8 am: %d", now.Hour(), sleepingRefreshDuration)
 		return sleepingRefreshDuration
 
 	}

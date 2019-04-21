@@ -63,7 +63,7 @@ func NewSnapshot(vehicleData *tesla.VehicleData) *Snapshot {
 
 func toChargeSession(parentResponse *tesla.VehicleData) *ChargeSession {
 	chargeState := parentResponse.ChargeState
-	if chargeState.ChargingState == "Disconnected" {
+	if chargeState.ChargingState == "Disconnected" || chargeState.ChargingState == "" {
 		return nil
 	}
 	session := &ChargeSession{
