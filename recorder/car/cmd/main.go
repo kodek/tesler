@@ -54,7 +54,7 @@ func main() {
 				message := pushover.NewMessage(fmt.Sprintf("Monitoring for %s is ready!", v.DisplayName))
 				_, err := push.SendMessage(message, pushUser)
 				if err != nil {
-					glog.Errorf("Cannot send Pushover message: ", err)
+					glog.Errorf("Cannot send Pushover message: %s", err)
 				}
 				return
 			}
@@ -64,14 +64,14 @@ func main() {
 	}
 
 	logAndNotifyListener := func(v *tesla.Vehicle) {
-		glog.Info("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
+		glog.Infof("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
 		message := pushover.NewMessageWithTitle(
 			spew.Sdump(v),
 			fmt.Sprintf("Vehicle %s state changed to %+v", v.DisplayName, v.State))
 		_, err := push.SendMessage(message, pushUser)
 
 		if err != nil {
-			glog.Errorf("Cannot send Pushover message: ", err)
+			glog.Errorf("Cannot send Pushover message: %s", err)
 		}
 	}
 
