@@ -165,6 +165,13 @@ type Recorder struct {
 	Database  databases.Database
 }
 
+const IDLE_TIME_BEFORE_SLEEP = 5 * time.Minute
+const IDLE_SAMPLING_FREQUENCY = 10 * time.Second
+
+func samplesBeforeSleep() int64 {
+	return IDLE_TIME_BEFORE_SLEEP.Nanoseconds() / IDLE_SAMPLING_FREQUENCY.Nanoseconds()
+}
+
 func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 	if this.recording {
 		glog.Fatalf("Recorder not reentrant (car VIN %s).", v.Vin)
@@ -176,7 +183,8 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 		this.recording = false
 	}()
 
-	endIfStillParked := false
+	// TODO: Encapsulate the idle sample timeout into a class.
+	idleSamplesRemaining := samplesBeforeSleep()
 	for {
 		// fetch data
 		data, err := getVehicleData(v)
@@ -190,19 +198,21 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 			return errors.Wrap(err, "cannot write data to database")
 		}
 
-		if shouldFastMonitor(data) {
+		activeDelay := getIntervalForActivePolling(data)
+		if activeDelay != nil {
 			// We should keep monitoring.
-			endIfStillParked = false
-			time.Sleep(2 * time.Second)
+			idleSamplesRemaining = samplesBeforeSleep()
+			time.Sleep(*activeDelay)
 		} else {
-			if endIfStillParked {
+			if idleSamplesRemaining <= 0 {
 				// THIS was the next run, so let's end.
 				glog.Infof("Done monitoring VIN %s.", v.Vin)
 				return nil
 			}
 			// We should stop monitoring after a while.
-			endIfStillParked = true
-			time.Sleep(5 * time.Minute)
+			idleSamplesRemaining = idleSamplesRemaining - 1
+			glog.Infof("Recording ends for car %s in %s samples.", v.Vin, idleSamplesRemaining)
+			time.Sleep(IDLE_SAMPLING_FREQUENCY)
 		}
 	}
 }
@@ -221,23 +231,44 @@ func getVehicleData(v *tesla.Vehicle) (*tesla.VehicleData, error) {
 	return retVal, errors.Wrap(finalErr, fmt.Sprintf("could not fetch vehicle data for %s after multiple tries", v.DisplayName))
 }
 
-func shouldFastMonitor(data *tesla.VehicleData) bool {
+func getIntervalForActivePolling(data *tesla.VehicleData) *time.Duration {
+	// A helper function to convert a Duration literal into a pointer.
+	pointerOf := func(d time.Duration) *time.Duration {
+		return &d
+	}
+
 	shiftState := data.DriveState.ShiftState
 
 	if data.DriveState.Speed > 0 {
-		glog.Info("Car %s is actively moving.", data.Vin)
-		return true
+		glog.Infof("Car %s is actively moving.", data.Vin)
+		return pointerOf(1 * time.Second)
 	}
 	if shiftState == "R" || shiftState == "D" || shiftState == "N" {
 		glog.Infof("Car %s not moving, but in gear.", data.Vin)
-		return true
+		return pointerOf(2 * time.Second)
 	}
 
 	chargeState := data.ChargeState.ChargingState
 	if chargeState == "Charging" || chargeState == "Starting" {
 		glog.Infof("Car %s has active charge state: %s.", data.Vin, chargeState)
-		return true
+		return pointerOf(3 * time.Second)
 	}
+
+	if data.VehicleState.SentryMode {
+		glog.Infof("Sentry mode enabled for %s.", data.Vin)
+		return pointerOf(30 * time.Second)
+	}
+
+	if data.VehicleState.CenterDisplayState != 0 {
+		glog.Info("Center display is on for car %s.", data.Vin)
+		return pointerOf(10 * time.Second)
+	}
+
+	if data.ClimateState.IsClimateOn {
+		glog.Info("Climate is on for car %s.", data.Vin)
+		return pointerOf(30 * time.Second)
+	}
+
 	glog.Infof("Car %s is not active.", data.Vin)
-	return false
+	return nil
 }

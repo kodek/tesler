@@ -49,7 +49,7 @@ func (p *Poller) Start() {
 }
 
 func (p *Poller) pollOnce() {
-	glog.Info("Polling vehicle status")
+	glog.Info("[Start] Polling status of all vehicles...")
 	vehicles, err := p.tc.Vehicles()
 	if err != nil {
 		glog.Error("Error while fetching vehicles status.", err)
