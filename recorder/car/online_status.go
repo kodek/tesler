@@ -72,7 +72,7 @@ func (p *Poller) pollOnce() {
 	}
 
 	for _, fns := range p.onPollingFns {
-		fns()
+		go fns()
 	}
 }
 

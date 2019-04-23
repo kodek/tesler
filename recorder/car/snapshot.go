@@ -39,7 +39,7 @@ type Bearings struct {
 }
 
 func NewSnapshot(vehicleData *tesla.VehicleData) *Snapshot {
-	glog.Infof("Parsing message: %s", spew.Sdump(vehicleData))
+	glog.Infof("Parsing message: %s", spew.Sprintf("%#v", vehicleData))
 	snapshot := Snapshot{
 		Timestamp:      time.Now(),
 		Name:           vehicleData.DisplayName,
