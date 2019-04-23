@@ -254,11 +254,6 @@ func getIntervalForActivePolling(data *tesla.VehicleData) *time.Duration {
 		return pointerOf(3 * time.Second)
 	}
 
-	if data.ChargeState.ChargerVoltage > 0 || data.ChargeState.ChargerActualCurrent > 0 {
-		glog.Infof("Car %s is still drawing power (%s).", data.Vin, spew.Sdump(data.ChargeState))
-		return pointerOf(10 * time.Second)
-	}
-
 	if data.VehicleState.SentryMode {
 		glog.Infof("Sentry mode enabled for %s.", data.Vin)
 		return pointerOf(30 * time.Second)
