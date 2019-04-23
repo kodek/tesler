@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"github.com/cenkalti/backoff"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/gregdel/pushover"
@@ -90,12 +93,14 @@ func main() {
 			// intuitive. Blocking should be okay, but it shouldn't block the actual listener.
 			go func() {
 				err := recorder.StartAndBlock(v)
+				msgDesc := "Success!"
 				if err != nil {
 					glog.Errorf("Stopped recording loop for VIN %s: %s", v.Vin, err)
+					msgDesc = spew.Sprintf("Error: %v", err)
 				}
 
 				message := pushover.NewMessageWithTitle(
-					spew.Sprintf("Error: %v", err),
+					msgDesc,
 					fmt.Sprintf("Done monitoring: %s", v.DisplayName))
 				_, err = push.SendMessage(message, pushUser)
 				if err != nil {
@@ -174,19 +179,15 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 	endIfStillParked := false
 	for {
 		// fetch data
-		data, err := v.VehicleData()
+		data, err := getVehicleData(v)
 		if err != nil {
-			// TODO: Add exponential backoff.
-			// TODO: Rewrap error and avoid over-logging.
-			glog.Errorf("Cannot fetch vehicle data for %s: %s", v.DisplayName, err)
 			return err
 		}
 
 		// record
 		err = this.Database.Insert(context.Background(), *car.NewSnapshot(data))
 		if err != nil {
-			glog.Errorf("Cannot fetch vehicle data for %s: %s", v.DisplayName, err)
-			return err
+			return errors.Wrap(err, "cannot write data to database")
 		}
 
 		if shouldFastMonitor(data) {
@@ -204,6 +205,20 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 			time.Sleep(5 * time.Minute)
 		}
 	}
+}
+
+func getVehicleData(v *tesla.Vehicle) (*tesla.VehicleData, error) {
+	onError := func(e error, d time.Duration) {
+		glog.Errorf("Error fetching VIN %s. Retrying in (%s): %s\n", v.Vin, common.Round(d, time.Millisecond), e)
+	}
+
+	var retVal *tesla.VehicleData
+	finalErr := backoff.RetryNotify(func() error {
+		var err error
+		retVal, err = v.VehicleData()
+		return err
+	}, backoff.NewExponentialBackOff(), onError)
+	return retVal, errors.Wrap(finalErr, fmt.Sprintf("could not fetch vehicle data for %s after multiple tries", v.DisplayName))
 }
 
 func shouldFastMonitor(data *tesla.VehicleData) bool {
