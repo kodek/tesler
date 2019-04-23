@@ -211,7 +211,7 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 			}
 			// We should stop monitoring after a while.
 			idleSamplesRemaining = idleSamplesRemaining - 1
-			glog.Infof("Recording ends for car %s in %s samples.", v.Vin, idleSamplesRemaining)
+			glog.Infof("Recording ends for car %s in %d samples.", v.Vin, idleSamplesRemaining)
 			time.Sleep(IDLE_SAMPLING_FREQUENCY)
 		}
 	}
@@ -260,12 +260,12 @@ func getIntervalForActivePolling(data *tesla.VehicleData) *time.Duration {
 	}
 
 	if data.VehicleState.CenterDisplayState != 0 {
-		glog.Info("Center display is on for car %s.", data.Vin)
+		glog.Infof("Center display is on for car %s.", data.Vin)
 		return pointerOf(10 * time.Second)
 	}
 
 	if data.ClimateState.IsClimateOn {
-		glog.Info("Climate is on for car %s.", data.Vin)
+		glog.Infof("Climate is on for car %s.", data.Vin)
 		return pointerOf(30 * time.Second)
 	}
 
