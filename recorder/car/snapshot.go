@@ -9,18 +9,19 @@ import (
 )
 
 type Snapshot struct {
-	Timestamp      time.Time
-	Name           string
-	Vin            string
-	WakeState      string // Whether the car is online or not before the remaining REST calls are performed.
-	DrivingState   string
-	Bearings       Bearings
-	ChargingState  string
-	BatteryLevel   int
-	RangeLeft      float64
-	ChargeLimitSoc int
-	ChargeSession  *ChargeSession
-	Odometer       float64
+	Timestamp         time.Time
+	Name              string
+	Vin               string
+	WakeState         string // Whether the car is online or not before the remaining REST calls are performed.
+	ActiveDescription string
+	DrivingState      string
+	Bearings          Bearings
+	ChargingState     string
+	BatteryLevel      int
+	RangeLeft         float64
+	ChargeLimitSoc    int
+	ChargeSession     *ChargeSession
+	Odometer          float64
 }
 
 type ChargeSession struct {

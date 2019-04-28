@@ -81,7 +81,8 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 		"misc",
 		tags,
 		map[string]interface{}{
-			"wake_state": snapshot.WakeState,
+			"wake_state":         snapshot.WakeState,
+			"active_description": snapshot.ActiveDescription,
 		}, snapshot.Timestamp)
 	if err != nil {
 		return err

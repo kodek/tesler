@@ -186,23 +186,29 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 	// TODO: Encapsulate the idle sample timeout into a class.
 	idleSamplesRemaining := samplesBeforeSleep()
 	for {
-		// fetch data
+		// Fetch data.
 		data, err := getVehicleData(v)
 		if err != nil {
 			return err
 		}
 
-		// record
-		err = this.Database.Insert(context.Background(), *car.NewSnapshot(data))
+		// Parse data and active state.
+		activeState := newActiveState(data)
+
+		snapshot := car.NewSnapshot(data)
+		snapshot.ActiveDescription = activeState.Description()
+
+		// Record.
+		err = this.Database.Insert(context.Background(), *snapshot)
 		if err != nil {
 			return errors.Wrap(err, "cannot write data to database")
 		}
 
-		activeDelay := getIntervalForActivePolling(data)
-		if activeDelay != nil {
+		// Determine polling frequency.
+		if !activeState.ShouldSleep() {
 			// We should keep monitoring.
 			idleSamplesRemaining = samplesBeforeSleep()
-			time.Sleep(*activeDelay)
+			time.Sleep(activeState.PollInterval())
 		} else {
 			if idleSamplesRemaining <= 0 {
 				// THIS was the next run, so let's end.
@@ -212,7 +218,7 @@ func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 			// We should stop monitoring after a while.
 			idleSamplesRemaining = idleSamplesRemaining - 1
 			glog.Infof("Recording ends for car %s in %d samples.", v.Vin, idleSamplesRemaining)
-			time.Sleep(IDLE_SAMPLING_FREQUENCY)
+			time.Sleep(activeState.PollInterval())
 		}
 	}
 }
@@ -231,44 +237,79 @@ func getVehicleData(v *tesla.Vehicle) (*tesla.VehicleData, error) {
 	return retVal, errors.Wrap(finalErr, fmt.Sprintf("could not fetch vehicle data for %s after multiple tries", v.DisplayName))
 }
 
-func getIntervalForActivePolling(data *tesla.VehicleData) *time.Duration {
-	// A helper function to convert a Duration literal into a pointer.
-	pointerOf := func(d time.Duration) *time.Duration {
-		return &d
-	}
+type ActiveState struct {
+	shouldSleep bool
+	pollFreq    time.Duration
+	desc        string
+}
 
+func (s *ActiveState) PollInterval() time.Duration {
+	return s.pollFreq
+}
+
+func (s *ActiveState) Description() string {
+	return s.desc
+}
+
+func (s *ActiveState) ShouldSleep() bool {
+	return s.shouldSleep
+}
+
+func newActiveState(data *tesla.VehicleData) ActiveState {
 	shiftState := data.DriveState.ShiftState
 
 	if data.DriveState.Speed > 0 {
 		glog.Infof("Car %s is actively moving.", data.Vin)
-		return pointerOf(1 * time.Second)
+		return ActiveState{
+			pollFreq: 1 * time.Second,
+			desc:     "Moving",
+		}
 	}
 	if shiftState == "R" || shiftState == "D" || shiftState == "N" {
 		glog.Infof("Car %s not moving, but in gear.", data.Vin)
-		return pointerOf(2 * time.Second)
+		return ActiveState{
+			pollFreq: 2 * time.Second,
+			desc:     "In gear",
+		}
 	}
 
 	chargeState := data.ChargeState.ChargingState
 	if chargeState == "Charging" || chargeState == "Starting" {
 		glog.Infof("Car %s has active charge state: %s.", data.Vin, chargeState)
-		return pointerOf(3 * time.Second)
+		return ActiveState{
+			pollFreq: 3 * time.Second,
+			desc:     "Charging",
+		}
 	}
 
 	if data.VehicleState.SentryMode {
 		glog.Infof("Sentry mode enabled for %s.", data.Vin)
-		return pointerOf(30 * time.Second)
+		return ActiveState{
+			pollFreq: 30 * time.Second,
+			desc:     "Sentry mode",
+		}
 	}
 
 	if data.VehicleState.CenterDisplayState != 0 {
 		glog.Infof("Center display is on for car %s.", data.Vin)
-		return pointerOf(10 * time.Second)
+		return ActiveState{
+			pollFreq: 10 * time.Second,
+			desc:     "Display on",
+		}
 	}
 
 	if data.ClimateState.IsClimateOn {
 		glog.Infof("Climate is on for car %s.", data.Vin)
-		return pointerOf(30 * time.Second)
+		return ActiveState{
+			pollFreq: 30 * time.Second,
+			desc:     "Climate on",
+		}
 	}
 
 	glog.Infof("Car %s is not active.", data.Vin)
-	return nil
+	return ActiveState{
+		pollFreq:    IDLE_SAMPLING_FREQUENCY,
+		desc:        "Idle",
+		shouldSleep: true,
+	}
 }
