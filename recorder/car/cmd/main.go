@@ -174,7 +174,7 @@ func samplesBeforeSleep() int64 {
 
 func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
 	if this.recording {
-		glog.Fatalf("Recorder not reentrant (car VIN %s).", v.Vin)
+		return errors.New(fmt.Sprintf("Recorder not reentrant (car VIN %s).", v.Vin))
 	}
 	// Make function non-reentrant.
 	// TODO: Determine if thread safety is required. This function is not thread-safe.
