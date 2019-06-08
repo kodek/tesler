@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
@@ -150,7 +151,28 @@ func main() {
 						recordMetricsAdapter(
 							recorder, logAndNotifyListener)))))
 	}
-	poller.Start()
+
+	mux := common.NewKodekMux("Tesler-Recorder-v2")
+
+	defaultHandlerFunc := func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/statusz", http.StatusSeeOther)
+	}
+	mux.HandleFunc("/", defaultHandlerFunc)
+	mux.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+		conf.WriteRedacted(w)
+	})
+	if conf.Recorder.Port == 0 {
+		glog.Fatal("Port 0 currently not supported. Please set config.Recorder.Port to continue.")
+	}
+	listenSpec := fmt.Sprintf(":%d", conf.Recorder.Port)
+	glog.Infof("Starting Tesler recorder server at %s", listenSpec)
+
+	go poller.Start()
+	glog.Fatal(http.ListenAndServe(listenSpec, mux))
 }
 
 func stateString(v *tesla.Vehicle) string {
