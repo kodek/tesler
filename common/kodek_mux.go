@@ -64,7 +64,7 @@ func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 		BuildTime:           BuildTime,
 		TravisCommit:        TravisCommit,
 		TravisCommitMessage: TravisCommitMessage,
-		TravisCommitJobUrl:  TravisCommitJobUrl,
+		TravisCommitJobUrl:  TravisCommitJobWebUrl,
 		Patterns:            mux.patterns,
 	}
 	mux.statuszTemplate.Execute(w, data)
