@@ -6,10 +6,9 @@ env:
   - secure: kLRIXpywtfx+zh2fhJX+M7yslzAQH+tlMBa0Y+epSimQqhjMMKqDMWTsYAxGJ+xSDOseGPio7aB7ayefLmOkLPQ/48Aucpa9Kg9aUiUIAZ24zIRZdkwIHXuwbB3M07eWJypc30vvpD4gLowrndDm9YgCefghxROmH/dVlBi7i4/P5MxTXvtywuWr3g95QSYBS0DnCRNAHoFp438Hv5Odk3TAXR8aRIHklU2BqCtlrp1uZuAsQz/X9d3pBcZ9i/9RGpJrdt76O5Qr2d7BqRQ8rDeru83mJUXdHcBMzgeg5Lmdgz0tE1ldV7I5WF4Qw09omp/NVTyDEQCeFIQGSjITXP1trewp3+DaK0cgyGAKOJ1djEZ/jz3l6MKZBwLH9rSgqQh1+scrOnXmeu8vWTwniP2KCgMTMHn5+itQ4cpT/1FTD3Qwh5xkH0lgcYriJ5FWNKdNJbHROHUvCw4vniZ1FE+27K0ohKsFDGDl32IcwtFGdoJpRlM/+I8wut1DeW3KovG78qHYF8njg6+qUMUdnzGHp4FNe/X5CPlwYSXzK+3ZPf9rT5Y8YIP0aWnv8R5cQP1GDH/WytSPS7vJKEyIhdwq76f0eJA5yPmYali40nawJXZ+A5EiRdhyHy1PYFlhX4bNgDaYra0GGMHf335YtkP/aMnK/XwX42jBHxzhTYs=
 go:
 - '1.11'
-gobuild_args: -ldflags "-X github.com/kodek/tesler/common.BuildTime=`date +%FT%T%z` -X github.com/kodek/tesler/common.TravisCommit=$TRAVIS_COMMIT -X github.com/kodek/tesler/common.TravisJobWebUrl=$TRAVIS_JOB_WEB_URL -X github.com/kodek/tesler/common.TravisCommitMessage=\"$TRAVIS_COMMIT_MESSAGE\""
 script:
 - go test ./...
-- go build -o ./recorder_main recorder/server/recorder_main.go
+- go build -ldflags "-X github.com/kodek/tesler/common.BuildTime=`date +%FT%T%z` -X github.com/kodek/tesler/common.TravisCommit=$TRAVIS_COMMIT -X github.com/kodek/tesler/common.TravisJobWebUrl=$TRAVIS_JOB_WEB_URL -X github.com/kodek/tesler/common.TravisCommitMessage=\"$TRAVIS_COMMIT_MESSAGE\"" -o ./recorder_main recorder/server/recorder_main.go
 - docker build -t "${IMAGE_NAME}:latest" --build-arg "travis_commit=${TRAVIS_COMMIT}"
   -f recorder/Dockerfile .
 before_deploy:
