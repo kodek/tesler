@@ -13,7 +13,7 @@ import (
 )
 
 const (
-  statuszTemplateFile = "templates/statusz.html"
+	statuszTemplateFile = "templates/statusz.html"
 )
 
 var (
@@ -33,7 +33,7 @@ type KodekMux struct {
 // NewKodekMux creates a new KodekMux to handle all http requests.
 func NewKodekMux(name string) *KodekMux {
 	mux := &KodekMux{
-		name: name,
+		name:            name,
 		statuszTemplate: template.Must(template.ParseFiles(statuszTemplateFile)),
 	}
 	// Don't add middleware to the following
@@ -53,11 +53,19 @@ func (mux *KodekMux) HandleFunc(pattern string, handler func(w http.ResponseWrit
 // handleStatusz implements the /statusz handler.
 func (mux *KodekMux) handleStatusz(w http.ResponseWriter, r *http.Request) {
 	data := struct {
-		ServerName string
-		Patterns   []string
+		ServerName          string
+		BuildTime           string
+		TravisCommit        string
+		TravisCommitMessage string
+		TravisCommitJobUrl  string
+		Patterns            []string
 	}{
-		ServerName: mux.name,
-		Patterns:   mux.patterns,
+		ServerName:          mux.name,
+		BuildTime:           BuildTime,
+		TravisCommit:        TravisCommit,
+		TravisCommitMessage: TravisCommitMessage,
+		TravisCommitJobUrl:  TravisCommitJobUrl,
+		Patterns:            mux.patterns,
 	}
 	mux.statuszTemplate.Execute(w, data)
 }
