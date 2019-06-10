@@ -1,10 +1,5 @@
 <h1>{{.ServerName}}</h1>
-<h2>Build</h2>
-<ul>
-    <li><B>Built at:</B> {{.BuildTime}}</li>
-    <li><b>TRAVIS_COMMIT:</b> <a href="{{.TravisCommitJobUrl}}">{{.TravisCommit}}</a></li>
-    <li><b>TRAVIS_COMMIT_MESSAGE:</b> {{.TravisCommitMessage}}</li>
-</ul>
+<h2>Built: {{.BuildTime}} (<a href="{{.TravisBuildWebUrl}}">{{.TravisCommit}}</a>)</h2>
 <h2>Handlers</h2>
 <ul>
   {{range .Patterns}}

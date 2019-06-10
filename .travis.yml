@@ -8,7 +8,7 @@ go:
 - '1.11'
 script:
 - go test ./...
-- go build -ldflags "-X github.com/kodek/tesler/common.BuildTime=`date -u +%Y-%m-%dT%H:%M:%SZ` -X github.com/kodek/tesler/common.TravisCommit=$TRAVIS_COMMIT -X github.com/kodek/tesler/common.TravisJobWebUrl=$TRAVIS_JOB_WEB_URL" -o ./recorder_main recorder/server/recorder_main.go
+- go build -ldflags "-X github.com/kodek/tesler/common.BuildTime=`date -u +%Y-%m-%dT%H:%M:%SZ` -X github.com/kodek/tesler/common.TravisCommit=$TRAVIS_COMMIT -X github.com/kodek/tesler/common.TravisBuildWebUrl=$TRAVIS_BUILD_WEB_URL" -o ./recorder_main recorder/server/recorder_main.go
 - docker build -t "${IMAGE_NAME}:latest" --build-arg "travis_commit=${TRAVIS_COMMIT}"
   -f recorder/Dockerfile .
 before_deploy:
