@@ -60,12 +60,12 @@ func (this *influxDbDatabase) Insert(ctx context.Context, snapshot car.Snapshot)
 
 	// Position
 	posMap := map[string]interface{}{
-		"latitude":  snapshot.Bearings.Latitude,
-		"longitude": snapshot.Bearings.Longitude,
-		"odometer":  snapshot.Odometer,
+		"latitude":      snapshot.Bearings.Latitude,
+		"longitude":     snapshot.Bearings.Longitude,
+		"odometer":      snapshot.Odometer,
+		"speed":         snapshot.Bearings.Speed,
+		"driving_state": snapshot.DrivingState,
 	}
-	posMap["speed"] = snapshot.Bearings.Speed
-	posMap["driving_state"] = snapshot.DrivingState
 	pos, err := influxdb.NewPoint(
 		"position",
 		tags,
