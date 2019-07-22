@@ -17,6 +17,7 @@ type Snapshot struct {
 	DrivingState      string
 	Bearings          Bearings
 	ChargingState     string
+	Power             float64
 	BatteryLevel      int
 	RangeLeft         float64
 	ChargeLimitSoc    int
@@ -47,6 +48,7 @@ func NewSnapshot(vehicleData *tesla.VehicleData) *Snapshot {
 		Vin:            vehicleData.Vin,
 		WakeState:      vehicleData.State,
 		ChargingState:  vehicleData.ChargeState.ChargingState,
+		Power:          vehicleData.DriveState.Power,
 		BatteryLevel:   vehicleData.ChargeState.BatteryLevel,
 		RangeLeft:      vehicleData.ChargeState.BatteryRange,
 		ChargeLimitSoc: vehicleData.ChargeState.ChargeLimitSoc,
