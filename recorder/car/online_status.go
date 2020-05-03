@@ -11,45 +11,38 @@ import (
 var pollInterval = flag.Duration("polling_interval", 10*time.Second, "How often to check for car changes.")
 
 type OnVehicleChangeFunc func(v *tesla.Vehicle)
-type OnPollingFunc func()
 
-type Poller struct {
+type StateMonitor struct {
 	tc              *tesla.Client
 	changeStatusFns []OnVehicleChangeFunc
-	onPollingFns    []OnPollingFunc
 	vinToStatus     map[string]*tesla.Vehicle
 }
 
-func (p *Poller) AddVehicleChangeListener(listenerFn OnVehicleChangeFunc) {
+func (p *StateMonitor) AddVehicleChangeListener(listenerFn OnVehicleChangeFunc) {
 	p.changeStatusFns = append(p.changeStatusFns, listenerFn)
 }
 
-func (p *Poller) AddPollingListener(listenerFn OnPollingFunc) {
-	p.onPollingFns = append(p.onPollingFns, listenerFn)
-}
-
-func NewPoller(tc *tesla.Client) (*Poller, error) {
-	p := &Poller{
+func NewPollingStateMonitor(tc *tesla.Client) (*StateMonitor, error) {
+	p := &StateMonitor{
 		tc:              tc,
 		vinToStatus:     make(map[string]*tesla.Vehicle),
 		changeStatusFns: make([]OnVehicleChangeFunc, 0),
-		onPollingFns:    make([]OnPollingFunc, 0),
 	}
 	return p, nil
 }
 
-func (p *Poller) Start() {
+func (p *StateMonitor) Poll() {
 	p.pollOnce()
 
 	ticker := time.NewTicker(*pollInterval)
 	for range ticker.C {
 		p.pollOnce()
-		glog.Info("Sleeping Poller")
+		glog.Info("Waiting for next state monitor polling cycle.")
 	}
 }
 
-func (p *Poller) pollOnce() {
-	glog.Info("[Start] Polling status of all vehicles...")
+func (p *StateMonitor) pollOnce() {
+	glog.Info("Fetching wake status of all vehicles...")
 	vehicles, err := p.tc.Vehicles()
 	if err != nil {
 		glog.Error("Error while fetching vehicles status.", err)
@@ -69,10 +62,6 @@ func (p *Poller) pollOnce() {
 		for _, listenerFn := range p.changeStatusFns {
 			go listenerFn(v.Vehicle)
 		}
-	}
-
-	for _, fns := range p.onPollingFns {
-		go fns()
 	}
 }
 

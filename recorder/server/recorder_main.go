@@ -35,12 +35,12 @@ func main() {
 		panic(err)
 	}
 
-	poller, err := car.NewPoller(teslaClient)
+	stateMonitor, err := car.NewPollingStateMonitor(teslaClient)
 	if err != nil {
 		panic(err)
 	}
 
-	newCountAdapter := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	countFn := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
 		// NOTE: Not thread-safe.
 		count := 0
 		return func(v *tesla.Vehicle) {
@@ -81,7 +81,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer database.Close()
+	defer func() {
+		if err := database.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	recordMetricsAdapter := func(recorder *Recorder, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
 		return func(v *tesla.Vehicle) {
@@ -93,7 +97,7 @@ func main() {
 			// TODO: This needs to be done async because it's inside an Adapter. This should be changed because it's not
 			// intuitive. Blocking should be okay, but it shouldn't block the actual listener.
 			go func() {
-				err := recorder.StartAndBlock(v)
+				err := recorder.RecordWhileVehicleInUse(v)
 				msgDesc := "Success!"
 				if err != nil {
 					glog.Errorf("Stopped recording loop for VIN %s: %s", v.Vin, err)
@@ -124,7 +128,7 @@ func main() {
 	}
 
 	for _, c := range conf.Recorder.Cars {
-		newSingleCarFilter := func(vin string, monitor bool, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+		singleCarFilterFn := func(vin string, monitor bool, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
 			return func(v *tesla.Vehicle) {
 				if v.Vin != vin {
 					// Skip the car. Hopefully some other handler will match it.
@@ -142,11 +146,11 @@ func main() {
 		recorder := &Recorder{
 			Database: database,
 		}
-		poller.AddVehicleChangeListener(
-			newSingleCarFilter(
+		stateMonitor.AddVehicleChangeListener(
+			singleCarFilterFn(
 				c.Vin,
 				c.Monitor,
-				newCountAdapter(
+				countFn(
 					greetOnFirstNotificationFn(
 						recordMetricsAdapter(
 							recorder, logAndNotifyListener)))))
@@ -171,7 +175,7 @@ func main() {
 	listenSpec := fmt.Sprintf(":%d", conf.Recorder.Port)
 	glog.Infof("Starting Tesler recorder server at %s", listenSpec)
 
-	go poller.Start()
+	go stateMonitor.Poll()
 	glog.Fatal(http.ListenAndServe(listenSpec, mux))
 }
 
@@ -194,7 +198,7 @@ func samplesBeforeSleep() int64 {
 	return IDLE_TIME_BEFORE_SLEEP.Nanoseconds() / IDLE_SAMPLING_FREQUENCY.Nanoseconds()
 }
 
-func (this *Recorder) StartAndBlock(v *tesla.Vehicle) error {
+func (this *Recorder) RecordWhileVehicleInUse(v *tesla.Vehicle) error {
 	if this.recording {
 		return errors.New(fmt.Sprintf("Recorder not reentrant (car VIN %s).", v.Vin))
 	}
