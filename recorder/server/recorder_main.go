@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
 	"github.com/gregdel/pushover"
@@ -10,7 +12,6 @@ import (
 	"github.com/kodek/tesler/common"
 	"github.com/kodek/tesler/recorder/car"
 	"github.com/kodek/tesler/recorder/databases"
-	"net/http"
 )
 
 func main() {
@@ -34,35 +35,6 @@ func main() {
 		panic(err)
 	}
 
-	countFn := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
-		// NOTE: Not thread-safe.
-		count := 0
-		return func(v *tesla.Vehicle) {
-			defer in(v)
-			count = count + 1
-			glog.Infof("Count for %s is %d.", v.DisplayName, count)
-		}
-	}
-
-	greetOnFirstNotificationFn := func(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
-		// NOTE: Not thread-safe.
-		isFirst := true
-		return func(v *tesla.Vehicle) {
-			defer in(v)
-			if isFirst {
-				isFirst = false
-
-				message := pushover.NewMessageWithTitle(
-					fmt.Sprintf("Car's state: %s", stateString(v)),
-					fmt.Sprintf("Monitoring for %s is ready!", v.DisplayName))
-				_, err := push.SendMessage(message, pushUser)
-				if err != nil {
-					glog.Errorf("Cannot send Pushover message: %s", err)
-				}
-			}
-		}
-	}
-
 	// Open database
 	var database databases.Database
 	influxConf := conf.Recorder.InfluxDbConfig
@@ -81,74 +53,24 @@ func main() {
 		}
 	}()
 
-	recordMetricsAdapter := func(recorder *Recorder, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
-		return func(v *tesla.Vehicle) {
-			defer in(v)
-			if v.State == nil || *v.State != "online" {
-				glog.Infof("Not recording metrics for %s because it's not online.", v.DisplayName)
-				return
-			}
-			// TODO: This needs to be done async because it's inside an Adapter. This should be changed because it's not
-			// intuitive. Blocking should be okay, but it shouldn't block the actual listener.
-			go func() {
-				err := recorder.RecordWhileVehicleInUse(v)
-				msgDesc := "Success!"
-				if err != nil {
-					glog.Errorf("Stopped recording loop for VIN %s: %s", v.Vin, err)
-					msgDesc = spew.Sprintf("Error: %v", err)
-				}
-
-				message := pushover.NewMessageWithTitle(
-					msgDesc,
-					fmt.Sprintf("Done monitoring: %s", v.DisplayName))
-				_, err = push.SendMessage(message, pushUser)
-				if err != nil {
-					glog.Errorf("Cannot send Pushover message: %s", err)
-				}
-			}()
-		}
-	}
-	logAndNotifyListener := func(v *tesla.Vehicle) {
-		glog.Infof("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
-
-		message := pushover.NewMessageWithTitle(
-			spew.Sdump(v),
-			fmt.Sprintf("Vehicle %s state changed to %s", v.DisplayName, stateString(v)))
-		_, err := push.SendMessage(message, pushUser)
-
-		if err != nil {
-			glog.Errorf("Cannot send Pushover message: %s", err)
-		}
+	pushoverFacade := &PushoverFacade{
+		push:      push,
+		recipient: pushUser,
 	}
 
 	for _, c := range conf.Recorder.Cars {
-		singleCarFilterFn := func(vin string, monitor bool, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
-			return func(v *tesla.Vehicle) {
-				if v.Vin != vin {
-					// Skip the car. Hopefully some other handler will match it.
-					// TODO: Restructure code so that if a new vin shows up (outside the config), an error is logged.
-					return
-				}
-				if !monitor {
-					glog.Infof("Ignored update for VIN %s. Monitoring disabled in config.", v.Vin)
-					return
-				}
-				in(v)
-			}
-		}
-
 		recorder, err := NewRecorder(database)
 		if err != nil {
 			panic(err)
 		}
 		stateMonitor.AddVehicleChangeListener(
-			singleCarFilterFn(
+			newFilterByCarMiddleware(
 				c.Vin,
 				c.Monitor,
-				countFn(
-					greetOnFirstNotificationFn(
-						recordMetricsAdapter(
-							recorder, logAndNotifyListener)))))
+				newCountStateChangesMiddleware(
+					newGreetOnFirstChangeMiddleware(pushoverFacade,
+						newRecordMetricsMiddleware(pushoverFacade,
+							recorder, newLogAndNotifyMiddleware(pushoverFacade, noOpHandler()))))))
 	}
 
 	mux := common.NewKodekMux("Tesler-Recorder-v2")
@@ -172,6 +94,95 @@ func main() {
 
 	go stateMonitor.Poll()
 	glog.Fatal(http.ListenAndServe(listenSpec, mux))
+}
+
+func noOpHandler() car.OnVehicleChangeFunc {
+	return func(v *tesla.Vehicle) {}
+}
+
+func newLogAndNotifyMiddleware(pushoverFacade *PushoverFacade, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	return func(v *tesla.Vehicle) {
+		defer in(v)
+		glog.Infof("Vehicle %s state changed: %s", v.DisplayName, spew.Sdump(v))
+
+		_, err := pushoverFacade.SendMessageWithTitle(
+			spew.Sdump(v),
+			fmt.Sprintf("Vehicle %s state changed to %s", v.DisplayName, stateString(v)))
+
+		if err != nil {
+			glog.Errorf("Cannot send Pushover message: %s", err)
+		}
+	}
+}
+
+func newRecordMetricsMiddleware(pushoverFacade *PushoverFacade, recorder *Recorder, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	return func(v *tesla.Vehicle) {
+		defer in(v)
+		if v.State == nil || *v.State != "online" {
+			glog.Infof("Not recording metrics for %s because it's not online.", v.DisplayName)
+			return
+		}
+		// TODO: This needs to be done async because it's inside an Adapter. This should be changed because it's not
+		// intuitive. Blocking should be okay, but it shouldn't block the actual listener.
+		go func() {
+			err := recorder.RecordWhileVehicleInUse(v)
+			msgDesc := "Success!"
+			if err != nil {
+				glog.Errorf("Stopped recording loop for VIN %s: %s", v.Vin, err)
+				msgDesc = spew.Sprintf("Error: %v", err)
+			}
+
+			_, err = pushoverFacade.SendMessageWithTitle(
+				msgDesc,
+				fmt.Sprintf("Done monitoring: %s", v.DisplayName))
+			if err != nil {
+				glog.Errorf("Cannot send Pushover message: %s", err)
+			}
+		}()
+	}
+}
+
+func newGreetOnFirstChangeMiddleware(pushoverSender *PushoverFacade, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	// NOTE: Not thread-safe.
+	isFirst := true
+	return func(v *tesla.Vehicle) {
+		defer in(v)
+		if isFirst {
+			isFirst = false
+
+			_, err := pushoverSender.SendMessageWithTitle(
+				fmt.Sprintf("Car's state: %s", stateString(v)),
+				fmt.Sprintf("Monitoring for %s is ready!", v.DisplayName))
+			if err != nil {
+				glog.Errorf("Cannot send Pushover message: %s", err)
+			}
+		}
+	}
+}
+
+func newCountStateChangesMiddleware(in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	// NOTE: Not thread-safe.
+	count := 0
+	return func(v *tesla.Vehicle) {
+		defer in(v)
+		count = count + 1
+		glog.Infof("Count for %s is %d.", v.DisplayName, count)
+	}
+}
+
+func newFilterByCarMiddleware(vin string, monitor bool, in car.OnVehicleChangeFunc) car.OnVehicleChangeFunc {
+	return func(v *tesla.Vehicle) {
+		if v.Vin != vin {
+			// Skip the car. Hopefully some other handler will match it.
+			// TODO: Restructure code so that if a new vin shows up (outside the config), an error is logged.
+			return
+		}
+		if !monitor {
+			glog.Infof("Ignored update for VIN %s. Monitoring disabled in config.", v.Vin)
+			return
+		}
+		in(v)
+	}
 }
 
 func stateString(v *tesla.Vehicle) string {
