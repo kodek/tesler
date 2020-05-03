@@ -191,22 +191,22 @@ type Recorder struct {
 	Database  databases.Database
 }
 
-const IDLE_TIME_BEFORE_SLEEP = 5 * time.Minute
-const IDLE_SAMPLING_FREQUENCY = 10 * time.Second
+const IdleTimeBeforeSleep = 5 * time.Minute
+const IdleSamplingFrequency = 10 * time.Second
 
 func samplesBeforeSleep() int64 {
-	return IDLE_TIME_BEFORE_SLEEP.Nanoseconds() / IDLE_SAMPLING_FREQUENCY.Nanoseconds()
+	return IdleTimeBeforeSleep.Nanoseconds() / IdleSamplingFrequency.Nanoseconds()
 }
 
-func (this *Recorder) RecordWhileVehicleInUse(v *tesla.Vehicle) error {
-	if this.recording {
+func (r *Recorder) RecordWhileVehicleInUse(v *tesla.Vehicle) error {
+	if r.recording {
 		return errors.New(fmt.Sprintf("Recorder not reentrant (car VIN %s).", v.Vin))
 	}
 	// Make function non-reentrant.
 	// TODO: Determine if thread safety is required. This function is not thread-safe.
-	this.recording = true
+	r.recording = true
 	defer func() {
-		this.recording = false
+		r.recording = false
 	}()
 
 	// TODO: Encapsulate the idle sample timeout into a class.
@@ -225,7 +225,7 @@ func (this *Recorder) RecordWhileVehicleInUse(v *tesla.Vehicle) error {
 		snapshot.ActiveDescription = activeState.Description()
 
 		// Record.
-		err = this.Database.Insert(context.Background(), *snapshot)
+		err = r.Database.Insert(context.Background(), *snapshot)
 		if err != nil {
 			return errors.Wrap(err, "cannot write data to database")
 		}
@@ -334,7 +334,7 @@ func newActiveState(data *tesla.VehicleData) ActiveState {
 
 	glog.Infof("Car %s is not active.", data.Vin)
 	return ActiveState{
-		pollFreq:    IDLE_SAMPLING_FREQUENCY,
+		pollFreq:    IdleSamplingFrequency,
 		desc:        "Idle",
 		shouldSleep: true,
 	}
