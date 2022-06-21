@@ -1,6 +1,6 @@
 # iron/go is the alpine image with only ca-certificates added
 #FROM iron/go
-FROM golang:1.9.2
+FROM golang:1.18.3
 WORKDIR /app
 # Now just add the binary 
 COPY ./templates /app/templates/
