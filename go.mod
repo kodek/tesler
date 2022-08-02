@@ -1,6 +1,6 @@
 module github.com/kodek/tesler
 
-go 1.14
+go 1.19
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
