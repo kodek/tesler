@@ -20,6 +20,8 @@ github.com/jtolds/gls v4.20.0+incompatible h1:xdiiI2gbIgH/gLH7ADydsJ1uDOEzR8yvV7
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
 github.com/kodek/tesla v0.0.0-20200502203920-f09615ca407b h1:9yI49wSiDPQpDViYhza+CTpM0paNKACVOR3QmU9zgsE=
 github.com/kodek/tesla v0.0.0-20200502203920-f09615ca407b/go.mod h1:QLtTfikO6YdIoKNT9tQde0cLoQ8cjDUP2l8mAjMBMf0=
+github.com/kodek/tesla v0.0.0-20241201084100-fba68a89b9bb h1:T/3BBS9rXZCcVFPLP6zO/CbfVrfyYOQ+LANaYF1KHXw=
+github.com/kodek/tesla v0.0.0-20241201084100-fba68a89b9bb/go.mod h1:ArwZ2dCAVIewPYfZGNb+H49CQa5zSxxQwA3ZRqujmzw=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d h1:zE9ykElWQ6/NYmHa3jpm/yHnI4xSofP+UP6SpjHcSeM=
